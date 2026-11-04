@@ -4,7 +4,9 @@ import type { Lang } from './types';
 import { translate, type TKey } from './i18n';
 
 export async function getLang(): Promise<Lang> {
-  const v = (await cookies()).get('lang')?.value;
+  // static export has no request cookies; the client switches language after load
+  if (process.env.STATIC_EXPORT) return 'ru';
+  const v = (await cookies()).get('nd_lang')?.value;
   return v === 'uz' ? 'uz' : 'ru';
 }
 

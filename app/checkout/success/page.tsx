@@ -1,11 +1,15 @@
+'use client';
+
 import Link from 'next/link';
-import { getT } from '@/lib/server-i18n';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useLang } from '@/components/providers';
 import { TELEGRAM } from '@/lib/i18n';
 
-export default async function SuccessPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  const { t, lang } = await getT();
-  const id = Number((await searchParams).id) || 0;
-  const num = `ND-${String(id).padStart(5, '0')}`;
+function Success() {
+  const { t, lang } = useLang();
+  const sp = useSearchParams();
+  const num = `ND-${String(Number(sp.get('id')) || 0).padStart(5, '0')}`;
   const msg = encodeURIComponent(lang === 'uz' ? `Assalomu alaykum! Buyurtma ${num}` : `Здравствуйте! Мой заказ ${num}`);
   return (
     <div className="page">
@@ -22,4 +26,8 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
       </div>
     </div>
   );
+}
+
+export default function SuccessPage() {
+  return <Suspense><Success /></Suspense>;
 }

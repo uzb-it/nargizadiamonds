@@ -7,7 +7,8 @@ import { ProductArt } from './ProductArt';
 import { useLang, useStore } from './providers';
 
 export function ProductMedia({ p, index = 0, className }: { p: Pick<Product, 'images' | 'art' | 'metal' | 'stone' | 'name_ru'>; index?: number; className?: string }) {
-  const src = p.images[index];
+  const raw = p.images[index];
+  const src = raw?.startsWith('/') ? process.env.NEXT_PUBLIC_BASE_PATH + raw : raw;
   if (src) return <img className={'media ' + (className ?? '')} src={src} alt={p.name_ru} loading="lazy" />;
   return <ProductArt art={p.art} metal={p.metal} stone={p.stone} className={className} />;
 }

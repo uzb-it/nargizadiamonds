@@ -9,3 +9,5 @@ tsconfig.tsbuildinfo
 .claude
 *.log
 .DS_Store
+.next-pages
+out

@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
-    "start": "next start -p 3010"
+    "start": "next start -p 3010",
+    "build:pages": "STATIC_EXPORT=1 NEXT_DIST_DIR=.next-pages next build",
+    "deploy:pages": "bash scripts/deploy-pages.sh"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "5.2.5",

@@ -1,13 +1,13 @@
+'use client';
+
 import Link from 'next/link';
-import { getT } from '@/lib/server-i18n';
+import { useLang } from '@/components/providers';
 import { Diamond } from '@/components/Diamond';
 import { Lines } from '@/components/Motion';
 import { ProductArt } from '@/components/ProductArt';
 
-export const metadata = { title: 'О нас' };
-
-export default async function AboutPage() {
-  const { t } = await getT();
+export default function AboutPage() {
+  const { t } = useLang();
   return (
     <>
       <section className="about-hero">

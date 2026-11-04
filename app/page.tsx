@@ -1,6 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { listProducts } from '@/lib/db';
-import { getT } from '@/lib/server-i18n';
+import { useLang, useProducts } from '@/components/providers';
 import { CATEGORIES } from '@/lib/types';
 import { MAPS, TELEGRAM } from '@/lib/i18n';
 import { Diamond } from '@/components/Diamond';
@@ -9,8 +10,6 @@ import { ProductArt } from '@/components/ProductArt';
 import { Rail } from '@/components/Rail';
 import { Lines } from '@/components/Motion';
 import { MapEmbed } from '@/components/MapEmbed';
-
-export const dynamic = 'force-dynamic';
 
 const CAT_ART: Record<string, [string, 'white' | 'yellow' | 'rose']> = {
   rings: ['solitaire', 'yellow'], earrings: ['drops', 'yellow'], necklaces: ['tennis', 'white'], bracelets: ['bangle', 'yellow'], brooches: ['brooch', 'yellow'],
@@ -23,9 +22,9 @@ const SVC_ICONS = {
   wholesale: <><path d="M3 20h18M5 20V9l7-5 7 5v11" /><path d="M9 20v-6h6v6" /></>,
 };
 
-export default async function Home() {
-  const { t } = await getT();
-  const products = listProducts();
+export default function Home() {
+  const { t } = useLang();
+  const products = useProducts();
   const featured = products.filter((p) => p.featured);
   const gifts = products.filter((p) => p.price !== null && p.price <= 1500).slice(0, 4);
 

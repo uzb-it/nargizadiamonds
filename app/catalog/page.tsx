@@ -1,11 +1,9 @@
-import { listProducts } from '@/lib/db';
-import { CatalogClient } from './CatalogClient';
+import { Suspense } from 'react';
+import { CatalogEntry } from './CatalogClient';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Каталог' };
 
-export default async function CatalogPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const sp = await searchParams;
-  // remount on real navigation (e.g. header menu → another category) so filters follow the URL
-  return <CatalogClient key={new URLSearchParams(sp as Record<string, string>).toString()} products={listProducts()} initial={sp} />;
+export default function CatalogPage() {
+  // filters are read from the URL on the client, so the page also works as a static file
+  return <Suspense><CatalogEntry /></Suspense>;
 }

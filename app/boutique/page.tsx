@@ -1,12 +1,12 @@
-import { getT } from '@/lib/server-i18n';
+'use client';
+
+import { useLang } from '@/components/providers';
 import { INSTAGRAM, MAPS, TELEGRAM } from '@/lib/i18n';
 import { Lines } from '@/components/Motion';
 import { MapEmbed } from '@/components/MapEmbed';
 
-export const metadata = { title: 'Бутик' };
-
-export default async function BoutiquePage() {
-  const { t } = await getT();
+export default function BoutiquePage() {
+  const { t } = useLang();
   return (
     <div className="page">
       <div className="wrap phead">

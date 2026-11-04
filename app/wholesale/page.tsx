@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLang } from '@/components/providers';
 import { Lines } from '@/components/Motion';
 import { ProductArt } from '@/components/ProductArt';
+import { IS_STATIC, openTelegram } from '@/lib/telegram-order';
 
 export default function WholesalePage() {
   const { t, lang } = useLang();
@@ -14,6 +15,12 @@ export default function WholesalePage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (f.name.trim().length < 2 || f.phone.replace(/\D/g, '').length < 9) { setState('error'); return; }
+    if (IS_STATIC) {
+      openTelegram([`🏷 Оптовая заявка — nargizadiamonds`, '', `👤 ${f.name}`, `📞 ${f.phone}`,
+        f.company ? `🏬 ${f.company}` : '', f.volume ? `💵 Объём: $${f.volume}` : '', f.comment ? `💬 ${f.comment}` : '']);
+      setState('done');
+      return;
+    }
     setState('sending');
     const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...f, type: 'wholesale', lang }) });
     setState(res.ok ? 'done' : 'error');
@@ -37,7 +44,7 @@ export default function WholesalePage() {
                 <div className="field"><label htmlFor="wv">{t('ws.volume')}</label><input id="wv" value={f.volume} onChange={set('volume')} inputMode="numeric" /></div>
                 <div className="field"><label htmlFor="wm">{t('checkout.comment')}</label><textarea id="wm" value={f.comment} onChange={set('comment')} /></div>
                 {state === 'error' && <p className="error">{t('checkout.error')}</p>}
-                <button className="btn btn--dark" disabled={state === 'sending'}>{state === 'sending' ? t('checkout.sending') : t('ws.submit')}</button>
+                <button className="btn btn--dark" disabled={state === 'sending'}>{state === 'sending' ? t('checkout.sending') : t(IS_STATIC ? 'ws.submitTg' : 'ws.submit')}</button>
               </form>
             )}
           </div>

@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation';
 import { getProduct, listProducts } from '@/lib/db';
 import { ProductClient } from './ProductClient';
 
-export const dynamic = 'force-dynamic';
+export function generateStaticParams() {
+  return listProducts().map((p) => ({ slug: p.slug }));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const p = getProduct((await params).slug);

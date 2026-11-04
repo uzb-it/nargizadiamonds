@@ -20,6 +20,7 @@ import { CartDrawer } from '@/components/CartDrawer';
 import { Motion } from '@/components/Motion';
 import { ArtDefs } from '@/components/ProductArt';
 import { getLang } from '@/lib/server-i18n';
+import { listProducts } from '@/lib/db';
 
 export const metadata: Metadata = {
   title: { default: 'Nargiza Diamonds — бриллианты Гонконг 750 · Ташкент', template: '%s · Nargiza Diamonds' },
@@ -32,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={lang}>
       <body suppressHydrationWarning>
         <ArtDefs />
-        <Providers lang={lang}>
+        <Providers lang={lang} products={listProducts()}>
           <Header />
           <main>{children}</main>
           <Footer />

@@ -9,7 +9,8 @@ import { ProductArt } from './ProductArt';
 import type { CartItem } from '@/lib/types';
 
 export function CartLineMedia({ item }: { item: CartItem }) {
-  return item.image ? <img className="media" src={item.image} alt="" /> : <ProductArt art={item.art} metal={item.metal} stone="diamond" />;
+  const src = item.image?.startsWith('/') ? process.env.NEXT_PUBLIC_BASE_PATH + item.image : item.image;
+  return src ? <img className="media" src={src} alt="" /> : <ProductArt art={item.art} metal={item.metal} stone="diamond" />;
 }
 
 export function CartDrawer() {

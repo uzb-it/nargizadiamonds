@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import gsap from 'gsap';
 import { CATEGORIES, METALS, STONES, type Category, type Metal, type Product, type Stone } from '@/lib/types';
 import { ProductCard } from '@/components/ProductCard';
-import { useLang } from '@/components/providers';
+import { useLang, useProducts } from '@/components/providers';
 import { Lines } from '@/components/Motion';
 
 type PriceKey = 'any' | 'u1500' | '1500-3000' | 'o3000';
@@ -19,7 +20,15 @@ const inPrice = (p: Product, k: PriceKey) => {
   return p.price > 3000;
 };
 
-export function CatalogClient({ products, initial }: { products: Product[]; initial: Record<string, string | undefined> }) {
+/** Reads filters from the URL; remounts on real navigation (e.g. header menu → another category). */
+export function CatalogEntry() {
+  const sp = useSearchParams();
+  const products = useProducts();
+  const initial = Object.fromEntries(sp.entries());
+  return <CatalogClient key={sp.toString()} products={products} initial={initial} />;
+}
+
+function CatalogClient({ products, initial }: { products: Product[]; initial: Record<string, string | undefined> }) {
   const { t } = useLang();
   const [category, setCategory] = useState<Category | 'all'>((CATEGORIES as string[]).includes(initial.category ?? '') ? initial.category as Category : 'all');
   const [metals, setMetals] = useState<Metal[]>((initial.metal?.split(',') ?? []).filter((m): m is Metal => (METALS as string[]).includes(m)));
@@ -39,7 +48,8 @@ export function CatalogClient({ products, initial }: { products: Product[]; init
     if (sort !== 'featured') q.set('sort', sort);
     const s = q.toString();
     // shallow URL update: no server round-trip on every filter click
-    window.history.replaceState(null, '', s ? `/catalog?${s}` : '/catalog');
+    const base = `${process.env.NEXT_PUBLIC_BASE_PATH}/catalog${process.env.NEXT_PUBLIC_STATIC ? '/' : ''}`;
+    window.history.replaceState(null, '', s ? `${base}?${s}` : base);
   }, [category, metals, stones, price, sort]);
 
   const list = useMemo(() => {

@@ -1,9 +1,12 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import type { CartItem, Lang, Product } from '@/lib/types';
 import { translate, type TKey } from '@/lib/i18n';
+
+/* ------------------------------------------------------------------ catalogue */
+const ProductsContext = createContext<Product[]>([]);
+export const useProducts = () => useContext(ProductsContext);
 
 /* ------------------------------------------------------------------ language */
 interface LangCtx { lang: Lang; t: (k: TKey) => string; setLang: (l: Lang) => void }
@@ -49,14 +52,19 @@ function save(key: string, v: unknown) {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage unavailable */ }
 }
 
-export function Providers({ lang: initialLang, children }: { lang: Lang; children: React.ReactNode }) {
-  const router = useRouter();
+export function Providers({ lang: initialLang, products, children }: { lang: Lang; products: Product[]; children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(initialLang);
+  // all text is rendered on the client, so switching language needs no server round-trip
   const setLang = useCallback((l: Lang) => {
-    document.cookie = `lang=${l}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `nd_lang=${l}; path=/; max-age=31536000; samesite=lax`;
+    document.documentElement.lang = l;
     setLangState(l);
-    router.refresh();
-  }, [router]);
+  }, []);
+  useEffect(() => {
+    // static build has no server to read the cookie — pick the saved language up on the client
+    const saved = document.cookie.match(/(?:^|; )nd_lang=(ru|uz)/)?.[1] as Lang | undefined;
+    if (saved && saved !== initialLang) { setLangState(saved); document.documentElement.lang = saved; }
+  }, [initialLang]);
   const t = useCallback((k: TKey) => translate(lang, k), [lang]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -90,8 +98,10 @@ export function Providers({ lang: initialLang, children }: { lang: Lang; childre
   }), [cart, favorites, drawer]);
 
   return (
-    <LangContext.Provider value={{ lang, t, setLang }}>
-      <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
-    </LangContext.Provider>
+    <ProductsContext.Provider value={products}>
+      <LangContext.Provider value={{ lang, t, setLang }}>
+        <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
+      </LangContext.Provider>
+    </ProductsContext.Provider>
   );
 }
