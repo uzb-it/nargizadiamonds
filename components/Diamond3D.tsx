@@ -67,7 +67,12 @@ export function Diamond3D({ className }: { className?: string }) {
         return;
       }
       const coarse = matchMedia('(pointer: coarse)').matches;
-      renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.25 : 1.75));
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Quality tiers: 'high' = real refraction + dispersion (needs a strong GPU),
+      // 'low' = env-mapped facets without the extra transmission pass, 1x resolution, 30 fps,
+      // 'min' = same look at reduced resolution and 15 fps for devices without real GPU power.
+      let tier: 'high' | 'low' | 'min' = coarse ? 'low' : 'high';
+      renderer.setPixelRatio(tier === 'high' ? Math.min(devicePixelRatio, 1.75) : 1);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.25;
 
@@ -80,12 +85,22 @@ export function Diamond3D({ className }: { className?: string }) {
       camera.lookAt(0, 0, 0);
 
       const geo = brilliantGeometry();
-      const mat = new THREE.MeshPhysicalMaterial({
+      const highMat = new THREE.MeshPhysicalMaterial({
         color: 0xffffff, metalness: 0, roughness: 0, transmission: 1, thickness: 1.6, ior: 2.42,
         dispersion: 6, specularIntensity: 1, envMapIntensity: 2.2, flatShading: true,
         iridescence: 0.25, iridescenceIOR: 1.6, clearcoat: 1, clearcoatRoughness: 0, side: THREE.DoubleSide,
       });
-      const gem = new THREE.Mesh(geo, mat);
+      const lowMat = new THREE.MeshPhysicalMaterial({
+        color: 0xf4f8ff, metalness: 0.15, roughness: 0, ior: 2.42, specularIntensity: 1, envMapIntensity: 3.4,
+        flatShading: true, clearcoat: 1, clearcoatRoughness: 0, transparent: true, opacity: 0.94,
+      });
+      const gem = new THREE.Mesh(geo, tier === 'high' ? highMat : lowMat);
+      const setTier = (next: 'low' | 'min') => {
+        tier = next;
+        gem.material = lowMat;
+        renderer.setPixelRatio(next === 'low' ? 1 : 0.7);
+        resize();
+      };
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 10), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 }));
       const group = new THREE.Group();
       group.add(gem, edges);
@@ -132,23 +147,51 @@ export function Diamond3D({ className }: { className?: string }) {
       window.addEventListener('pointerup', up);
       window.addEventListener('pointermove', move);
 
+      // the page scroll always wins: the gem holds still while the user scrolls
+      let scrollingUntil = 0;
+      const onScroll = () => { scrollingUntil = performance.now() + 160; };
+      window.addEventListener('scroll', onScroll, { passive: true });
+
       let visible = true;
       const io = new IntersectionObserver(([e]) => { visible = e.intersectionRatio > 0.3; }, { threshold: [0, 0.3, 0.6] });
       io.observe(canvas);
 
       const clock = new THREE.Clock();
-      let spin = 0, intro = 0, raf = 0;
-      const loop = () => {
+      let spin = 0, intro = 0, raf = 0, last = 0;
+      // frame-time probe: after ~1 s at a tier, step down if frames are too slow
+      let probeStart = 0, probeFrames = 0, probeSum = 0;
+      const probe = (now: number, frameMs: number) => {
+        if (tier === 'min') return;
+        if (!probeStart) { probeStart = now; return; }
+        probeFrames++; probeSum += frameMs;
+        if (now - probeStart < 1000 || probeFrames < 4) return;
+        const avg = probeSum / probeFrames;
+        const limit = tier === 'high' ? 24 : 45; // high must hold ~40+ fps, low ~22+ fps (its cap is 30)
+        if (avg > limit) {
+          const next = tier === 'high' ? 'low' : 'min';
+          setTier(next);
+          if (next === 'low') { probeStart = 0; probeFrames = 0; probeSum = 0; return; } // probe the new tier too
+        }
+        probeStart = Infinity; // settled
+      };
+      const loop = (now: number) => {
         raf = requestAnimationFrame(loop);
-        if (!visible || document.hidden) return;
+        if (!visible || document.hidden || now < scrollingUntil) { last = 0; return; }
+        const cap = tier === 'high' ? 0 : tier === 'low' ? 31 : 64;
+        if (last && now - last < cap) return;
+        const frameMs = last ? now - last : 0;
+        const dt = last ? Math.min(4, frameMs / 16.67) : 1; // animation speed independent of frame rate
+        if (last) probe(now, frameMs);
+        last = now;
         const t = clock.getElapsedTime();
-        intro = Math.min(1, intro + 0.006);
+        intro = Math.min(1, intro + 0.006 * dt);
         const e = 1 - Math.pow(1 - intro, 4);
-        spin += 0.0035 + vel;
-        vel *= 0.94;
+        spin += (0.0035 + vel) * dt;
+        vel *= Math.pow(0.94, dt);
+        const k = 1 - Math.pow(0.95, dt);
         group.rotation.y = spin + (1 - e) * 2.5;
-        group.rotation.x += (0.32 + mouse.y * 0.35 - group.rotation.x) * 0.05;
-        group.rotation.z += (-mouse.x * 0.2 - group.rotation.z) * 0.05;
+        group.rotation.x += (0.32 + mouse.y * 0.35 - group.rotation.x) * k;
+        group.rotation.z += (-mouse.x * 0.2 - group.rotation.z) * k;
         group.position.x = baseX;
         group.position.y = baseY + Math.sin(t * 1.1) * 0.05 - (1 - e) * 0.6;
         gem.scale.setScalar(0.6 + e * 0.4);
@@ -164,7 +207,8 @@ export function Diamond3D({ className }: { className?: string }) {
         if (cancelled) return;
         canvas.style.opacity = '1';
         clock.start();
-        loop();
+        if (reduced) { group.position.set(baseX, baseY, 0); renderer.render(scene, camera); return; }
+        raf = requestAnimationFrame(loop);
       });
 
       cleanup = () => {
@@ -173,8 +217,9 @@ export function Diamond3D({ className }: { className?: string }) {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointermove', move);
+        window.removeEventListener('scroll', onScroll);
         canvas.removeEventListener('pointerdown', down);
-        geo.dispose(); mat.dispose(); pmrem.dispose(); renderer.dispose();
+        geo.dispose(); highMat.dispose(); lowMat.dispose(); pmrem.dispose(); renderer.dispose();
       };
     }
 

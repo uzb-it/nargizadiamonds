@@ -174,7 +174,11 @@ img, svg { display: block; max-width: 100%; }
 .line__price { font-size: 14px; margin-bottom: 8px; }
 
 /* ---------- glint animation used in SVG art ---------- */
-.glint { transform-box: fill-box; transform-origin: center; animation: glint 3s ease-in-out infinite; }
+/* sparkles rest as a soft static glint and only animate where the eye is (hover, product page),
+   so dozens of cards don't repaint every frame */
+.glint { transform-box: fill-box; transform-origin: center; opacity: .75; transform: scale(.55) rotate(45deg); }
+.pcard:hover .glint, .cat:hover .glint, .mega__tile:hover .glint, .pdp__shot .glint, .zoom .glint { animation: glint 3s ease-in-out infinite; }
+@media (hover: none) { .pdp__shot .glint { animation: none; } }
 @keyframes glint { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
 
 /* ---------- product card ---------- */
@@ -522,3 +526,6 @@ img, svg { display: block; max-width: 100%; }
   .adm-stats { grid-template-columns: 1fr 1fr; }
   .adm-form__grid, .adm-2 { grid-template-columns: 1fr; }
 }
+
+/* the reveal scales the inner media up; never let it widen the page */
+[data-curtain] { overflow: hidden; }
