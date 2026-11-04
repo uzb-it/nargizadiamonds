@@ -1,0 +1,28 @@
+{
+  "name": "nargiza-store",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3010",
+    "build": "next build",
+    "start": "next start -p 3010"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "5.2.5",
+    "@fontsource/manrope": "5.2.5",
+    "gsap": "3.12.5",
+    "lenis": "1.1.13",
+    "next": "15.5.15",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "server-only": "^0.0.1",
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "@types/three": "0.169.0",
+    "typescript": "5.7.2"
+  }
+}
