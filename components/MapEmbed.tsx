@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const SRC = 'https://maps.google.com/maps?q=%D0%BC%D0%B5%D1%82%D1%80%D0%BE%20%D0%9D%D0%BE%D0%B2%D0%B7%D0%B0%20%D0%A2%D0%B0%D1%88%D0%BA%D0%B5%D0%BD%D1%82&z=15&output=embed';
+const SRC = 'https://maps.google.com/maps?q=41.2929277,69.2232834&z=17&hl=ru&output=embed';
 
 /**
  * Google Maps iframe is heavy; it is mounted only once the block is on screen

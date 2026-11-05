@@ -272,7 +272,7 @@ img, svg { display: block; max-width: 100%; }
 .gifts__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px 16px; }
 
 .services-sec { padding: clamp(72px, 9vw, 136px) 0; background: var(--ivory); }
-.services { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.services { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .svc { padding: 44px 30px 46px; background: var(--white); text-align: center; display: flex; flex-direction: column; align-items: center; }
 .svc__icon { width: 32px; height: 32px; margin-bottom: 24px; stroke: var(--gold); fill: none; stroke-width: 1.1; }
 .svc h3 { font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 12px; }
@@ -420,7 +420,6 @@ img, svg { display: block; max-width: 100%; }
   .cat { grid-column: span 2; }
   .cat:nth-child(4) { grid-column: 2 / span 2; }
   .rail { grid-auto-columns: calc((100% - 2 * 20px) / 3); }
-  .services { grid-template-columns: repeat(2, 1fr); }
   .gifts { grid-template-columns: 1fr; }
 }
 @media (max-width: 960px) {

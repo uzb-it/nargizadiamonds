@@ -19,7 +19,6 @@ const SVC_ICONS = {
   video: <path d="M3 7h12v10H3zM15 10l6-3v10l-6-3" />,
   boutique: <><path d="M4 9h16v11H4z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></>,
   size: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /></>,
-  care: <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" />,
 };
 
 export default function Home() {
@@ -124,7 +123,7 @@ export default function Home() {
             <Lines className="h2" lines={[t('home.services')]} />
           </div>
           <div className="services">
-            {(['video', 'boutique', 'size', 'care'] as const).map((k) => (
+            {(['video', 'boutique', 'size'] as const).map((k) => (
               <div key={k} className="svc" data-reveal>
                 <svg className="svc__icon" viewBox="0 0 24 24">{SVC_ICONS[k]}</svg>
                 <h3>{t(`svc.${k}.t`)}</h3>

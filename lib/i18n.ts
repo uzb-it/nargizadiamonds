@@ -26,7 +26,6 @@ const ru = {
   'svc.video.t': 'Видео изделия', 'svc.video.d': 'Покажем украшение при дневном свете и в движении.',
   'svc.boutique.t': 'Примерка в бутике', 'svc.boutique.d': 'Примерьте любое изделие в BLACK DIAMOND.',
   'svc.size.t': 'Подбор размера', 'svc.size.d': 'Поможем определить размер кольца и подобрать пару.',
-  'svc.care.t': 'Уход и чистка', 'svc.care.d': 'Бесплатная чистка и проверка камней раз в год.',
   'home.boutique.kicker': 'Бутик', 'home.boutique.title': 'Ждём вас в BLACK DIAMOND',
   'boutique.address': 'Ювелирный центр Алиева, 2 этаж, метро Новза, Ташкент',
   'boutique.route': 'Построить маршрут', 'boutique.write': 'Написать нам',
@@ -41,8 +40,8 @@ const ru = {
   'product.carat': 'Вес бриллиантов', 'product.metal': 'Металл', 'product.stone': 'Камень', 'product.sizes': 'Размеры в наличии',
   'product.visit': 'Посмотреть в бутике', 'product.ask': 'Задать вопрос',
   'product.inStock': 'В наличии в бутике', 'product.outStock': 'Под заказ',
-  'product.details': 'Описание', 'product.care': 'Уход и сервис', 'product.boutique': 'Где посмотреть',
-  'product.careText': 'Храните изделие отдельно в футляре. Раз в год рекомендуем бесплатную чистку и проверку крапанов в бутике.',
+  'product.details': 'Описание', 'product.care': 'Уход', 'product.boutique': 'Где посмотреть',
+  'product.careText': 'Храните изделие отдельно в футляре. Снимайте украшения перед спортом и уборкой, берегите их от парфюма и бытовой химии.',
   'product.boutiqueText': 'Изделие можно увидеть и примерить в бутике BLACK DIAMOND: ювелирный центр Алиева, 2 этаж, метро Новза.',
   'product.related': 'Вам может понравиться', 'product.origin': 'Происхождение', 'product.hk': 'Гонконг',
   'about.kicker': 'О доме', 'about.title': 'Только самые лучшие бриллианты',
@@ -64,4 +63,5 @@ export function translate(key: TKey): string {
 
 export const TELEGRAM = 'https://t.me/nargiza_goldd';
 export const INSTAGRAM = 'https://www.instagram.com/nargizadiamons/';
-export const MAPS = 'https://www.google.com/maps/search/?api=1&query=%D1%8E%D0%B2%D0%B5%D0%BB%D0%B8%D1%80%D0%BD%D1%8B%D0%B9+%D1%86%D0%B5%D0%BD%D1%82%D1%80+%D0%90%D0%BB%D0%B8%D0%B5%D0%B2%D0%B0+%D0%9D%D0%BE%D0%B2%D0%B7%D0%B0+%D0%A2%D0%B0%D1%88%D0%BA%D0%B5%D0%BD%D1%82';
+// Голд Центр (бывш. «Алиев Заргари»), пр-т Бунёдкор, 15: кнопка сразу строит маршрут до здания
+export const MAPS = 'https://www.google.com/maps/dir/?api=1&destination=41.2929277,69.2232834&destination_place_id=ChIJXZqBa0yKrjgRQ0vHcyQDRwA';
