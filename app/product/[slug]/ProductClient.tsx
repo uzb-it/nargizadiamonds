@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { Product } from '@/lib/types';
 import { pdesc, pname } from '@/lib/format';
-import { TELEGRAM } from '@/lib/i18n';
-import { useLang, useStore } from '@/components/providers';
-import { FavButton, Price, ProductCard, ProductMedia } from '@/components/ProductCard';
+import { MAPS, TELEGRAM } from '@/lib/i18n';
+import { useLang } from '@/components/providers';
+import { Price, ProductCard, ProductMedia } from '@/components/ProductCard';
 import { ProductArt } from '@/components/ProductArt';
 
 function Accordion({ items }: { items: { title: string; body: string }[] }) {
@@ -24,34 +24,24 @@ function Accordion({ items }: { items: { title: string; body: string }[] }) {
 }
 
 export function ProductClient({ p, related }: { p: Product; related: Product[] }) {
-  const { lang, t } = useLang();
-  const { add } = useStore();
-  const [size, setSize] = useState<number | null>(null);
-  const [sizeErr, setSizeErr] = useState(false);
+  const { t } = useLang();
   const [zoom, setZoom] = useState<number | null>(null);
-  const name = pname(p, lang);
+  const name = pname(p);
 
   // with photos — show them; without — three staged views of the illustration
   const shots = p.images.length ? p.images.map((_, i) => ({ kind: 'img' as const, i })) :
     [{ kind: 'tile' as const, i: 0 }, { kind: 'dark' as const, i: 0 }, { kind: 'detail' as const, i: 0 }];
 
-  const tgText = encodeURIComponent(`${lang === 'uz' ? 'Assalomu alaykum! Qiziqtiradi' : 'Здравствуйте! Интересует'}: ${name}${size ? `, ${t('product.size')} ${size}` : ''}`);
-
-  const onAdd = () => {
-    if (p.sizes.length && size === null) { setSizeErr(true); return; }
-    add(p, size);
-  };
-
   return (
     <div className="page">
       <div className="wrap">
         <nav className="crumbs">
-          <Link href="/">Nargiza</Link><span>/</span>
+          <Link href="/">Главная</Link><span>/</span>
           <Link href={`/catalog?category=${p.category}`}>{t(`cat.${p.category}`)}</Link><span>/</span>
           <span>{name}</span>
         </nav>
 
-        <div className="pdp" style={{ marginTop: 24 }}>
+        <div className="pdp">
           <div className="pdp__gallery">
             {shots.map((s, k) => (
               <div key={k}
@@ -74,43 +64,32 @@ export function ProductClient({ p, related }: { p: Product; related: Product[] }
           </div>
 
           <div className="pdp__info">
-            <p className="kicker">{t(`cat.${p.category}`)}</p>
+            <p className="pdp__cat">{t(`cat.${p.category}`)}</p>
             <h1 className="pdp__name">{name}</h1>
-            <p className="pdp__ref">REF. ND-{String(p.id).padStart(4, '0')}</p>
-            <p className="pdp__price" style={{ marginTop: 18 }}><Price value={p.price} /></p>
+            <p className="pdp__ref">Артикул ND-{String(p.id).padStart(4, '0')}</p>
+            <p className="pdp__price"><Price value={p.price} /></p>
+            <p className="pdp__sub">{t(`metal.${p.metal}`)} 750{p.carat ? ` · бриллианты ${p.carat} ct` : ''}</p>
 
             <div className="pdp__specs">
               <div><span>{t('product.metal')}</span>{t(`metal.${p.metal}`)} 750</div>
               <div><span>{t('product.stone')}</span>{t(`stone.${p.stone}`)}</div>
               {p.carat && <div><span>{t('product.carat')}</span>{p.carat} ct</div>}
               <div><span>{t('product.origin')}</span>{t('product.hk')}</div>
+              {p.sizes.length > 0 && <div><span>{t('product.sizes')}</span>{p.sizes.join(' · ')}</div>}
             </div>
 
-            {p.sizes.length > 0 && (
-              <>
-                <p className={`sizes-label ${sizeErr ? 'is-error' : ''}`}>{t('product.size')}{sizeErr ? ` — ${t('product.sizeHint')}` : ''}</p>
-                <div className="sizes">
-                  {p.sizes.map((s) => (
-                    <button key={s} className={size === s ? 'is-on' : ''} onClick={() => { setSize(s); setSizeErr(false); }}>{s}</button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="pdp__buy">
-              {p.price === null
-                ? <a className="btn btn--dark" href={`${TELEGRAM}?text=${tgText}`} target="_blank" rel="noopener">{t('product.ask')}</a>
-                : <button className="btn btn--dark" onClick={onAdd}>{t('product.add')}</button>}
-              <FavButton id={p.id} />
+            <div className="pdp__cta">
+              <Link className="btn btn--dark btn--block" href="/boutique">{t('product.visit')}</Link>
+              <a className="btn btn--line btn--block" href={TELEGRAM} target="_blank" rel="noopener">{t('product.ask')}</a>
             </div>
-            <a className="btn btn--line btn--block" style={{ marginTop: 8 }} href={`${TELEGRAM}?text=${tgText}`} target="_blank" rel="noopener">{t('product.consult')}</a>
             <p className={`pdp__stock ${p.in_stock ? '' : 'is-out'}`}>{p.in_stock ? t('product.inStock') : t('product.outStock')}</p>
 
             <Accordion items={[
-              { title: t('product.details'), body: pdesc(p, lang) },
+              { title: t('product.details'), body: pdesc(p) },
+              { title: t('product.boutique'), body: t('product.boutiqueText') },
               { title: t('product.care'), body: t('product.careText') },
-              { title: t('product.delivery'), body: t('product.deliveryText') },
             ]} />
+            <a href={MAPS} target="_blank" rel="noopener" className="link-u pdp__route">{t('boutique.route')}</a>
           </div>
         </div>
 

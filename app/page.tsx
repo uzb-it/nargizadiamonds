@@ -12,14 +12,14 @@ import { Lines } from '@/components/Motion';
 import { MapEmbed } from '@/components/MapEmbed';
 
 const CAT_ART: Record<string, [string, 'white' | 'yellow' | 'rose']> = {
-  rings: ['solitaire', 'yellow'], earrings: ['drops', 'yellow'], necklaces: ['tennis', 'white'], bracelets: ['bangle', 'yellow'], brooches: ['brooch', 'yellow'],
+  rings: ['solitaire', 'white'], earrings: ['drops', 'yellow'], necklaces: ['tennis', 'white'], bracelets: ['bangle', 'yellow'], brooches: ['brooch', 'yellow'],
 };
 
 const SVC_ICONS = {
   video: <path d="M3 7h12v10H3zM15 10l6-3v10l-6-3" />,
-  reserve: <><path d="M4 9h16v11H4z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></>,
+  boutique: <><path d="M4 9h16v11H4z" /><path d="M8 9V6a4 4 0 0 1 8 0v3" /></>,
   size: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /></>,
-  wholesale: <><path d="M3 20h18M5 20V9l7-5 7 5v11" /><path d="M9 20v-6h6v6" /></>,
+  care: <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" />,
 };
 
 export default function Home() {
@@ -30,7 +30,7 @@ export default function Home() {
 
   return (
     <>
-      {/* HERO */}
+      {/* HERO — full-bleed campaign with the 3D diamond */}
       <section className="hero">
         <Diamond className="hero__canvas" />
         <div className="hero__inner">
@@ -39,19 +39,15 @@ export default function Home() {
             <span className="ln"><span>{t('hero.title1')}</span></span>
             <span className="ln"><span><em>{t('hero.title2')}</em></span></span>
           </h1>
-          <div className="hero__actions" data-intro>
-            <Link href="/catalog" className="btn btn--light">{t('hero.cta')}</Link>
-            <a href={TELEGRAM} target="_blank" rel="noopener" className="btn btn--ghost">{t('hero.cta2')}</a>
-          </div>
+          <div data-intro><Link href="/catalog" className="link-u link-u--light">{t('hero.cta')}</Link></div>
         </div>
-        <span className="hero__scroll">Scroll</span>
+        <span className="hero__scroll" aria-hidden />
       </section>
 
       {/* CATEGORIES */}
       <section className="section">
         <div className="wrap">
           <div className="sec-head sec-head--center">
-            <span className="kicker" data-reveal>Nargiza Diamonds</span>
             <Lines className="h2" lines={[t('home.cats')]} />
             <p className="lead" data-reveal>{t('home.catsSub')}</p>
           </div>
@@ -59,10 +55,46 @@ export default function Home() {
             {CATEGORIES.map((c) => (
               <Link key={c} href={`/catalog?category=${c}`} className="cat" data-reveal>
                 <div className="cat__media" data-curtain><ProductArt art={CAT_ART[c][0]} metal={CAT_ART[c][1]} stone="diamond" /></div>
-                <p className="cat__name">{t(`cat.${c}`)} <i>→</i></p>
+                <p className="cat__name">{t(`cat.${c}`)}</p>
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* EDITORIAL DUO */}
+      <section className="duo">
+        <Link href="/catalog?category=rings" className="duo__item">
+          <div className="duo__media" data-curtain><ProductArt art="halo" metal="white" stone="diamond" /></div>
+          <div className="duo__text">
+            <span className="kicker" data-reveal>{t('home.duo1.k')}</span>
+            <h3 className="h3" data-reveal>{t('home.duo1.t')}</h3>
+            <p data-reveal>{t('home.duo1.d')}</p>
+            <span className="link-u" data-reveal>{t('home.discover')}</span>
+          </div>
+        </Link>
+        <Link href="/catalog?stone=sapphire,emerald,ruby" className="duo__item">
+          <div className="duo__media duo__media--deep" data-curtain><ProductArt art="butterfly" metal="white" stone="sapphire" /></div>
+          <div className="duo__text">
+            <span className="kicker" data-reveal>{t('home.duo2.k')}</span>
+            <h3 className="h3" data-reveal>{t('home.duo2.t')}</h3>
+            <p data-reveal>{t('home.duo2.d')}</p>
+            <span className="link-u" data-reveal>{t('home.discover')}</span>
+          </div>
+        </Link>
+      </section>
+
+      {/* BESTSELLERS */}
+      <section className="section">
+        <div className="wrap">
+          <div className="sec-head sec-head--center">
+            <Lines className="h2" lines={[t('home.featured')]} />
+            <p className="lead" data-reveal>{t('home.featuredSub')}</p>
+          </div>
+          <Rail>
+            {featured.map((p) => <ProductCard key={p.id} p={p} />)}
+          </Rail>
+          <div className="center" data-reveal><Link href="/catalog" className="btn btn--line">{t('nav.all')}</Link></div>
         </div>
       </section>
 
@@ -70,7 +102,7 @@ export default function Home() {
       <section className="story">
         <div className="story__media">
           <span className="story__ring" /><span className="story__ring" />
-          <div data-parallax="8" style={{ width: '100%', display: 'grid', placeItems: 'center' }}>
+          <div data-parallax="8" className="story__art">
             <ProductArt art="halo" metal="yellow" stone="diamond" />
           </div>
         </div>
@@ -78,48 +110,33 @@ export default function Home() {
           <span className="kicker" data-reveal>{t('home.story.kicker')}</span>
           <Lines className="h2" lines={[t('home.story.title')]} />
           <p data-reveal>{t('home.story.text')}</p>
-          <Link href="/about" className="link-u" data-reveal>{t('home.story.cta')}</Link>
-        </div>
-      </section>
-
-      {/* FEATURED */}
-      <section className="section">
-        <div className="wrap">
-          <div className="sec-head">
-            <div>
-              <span className="kicker" data-reveal>{t('nav.highlights')}</span>
-              <Lines className="h2" lines={[t('home.featured')]} />
-              <p className="lead" data-reveal>{t('home.featuredSub')}</p>
-            </div>
-            <Link href="/catalog" className="link-u" data-reveal>{t('nav.all')}</Link>
-          </div>
-          <Rail>
-            {featured.map((p) => <ProductCard key={p.id} p={p} />)}
-          </Rail>
+          <Link href="/about" className="link-u link-u--light" data-reveal>{t('home.story.cta')}</Link>
         </div>
       </section>
 
       {/* GIFTS */}
-      <section className="gifts">
-        <div className="gifts__text">
-          <span className="kicker" data-reveal>{t('home.gifts.kicker')}</span>
-          <Lines className="h2" lines={[t('home.gifts.title')]} />
-          <p className="lead" data-reveal>{t('home.gifts.text')}</p>
-          <div data-reveal><Link href="/catalog?price=u1500" className="btn btn--dark">{t('home.discover')}</Link></div>
-        </div>
-        <div className="gifts__grid">
-          {gifts.map((p) => <div key={p.id} data-reveal><ProductCard p={p} /></div>)}
+      <section className="section">
+        <div className="wrap gifts">
+          <div className="gifts__text">
+            <span className="kicker" data-reveal>{t('home.gifts.kicker')}</span>
+            <Lines className="h2" lines={[t('home.gifts.title')]} />
+            <p className="lead" data-reveal>{t('home.gifts.text')}</p>
+            <div data-reveal><Link href="/catalog?price=u1500" className="btn btn--dark">{t('home.discover')}</Link></div>
+          </div>
+          <div className="gifts__grid">
+            {gifts.map((p) => <div key={p.id} data-reveal><ProductCard p={p} /></div>)}
+          </div>
         </div>
       </section>
 
       {/* SERVICES */}
-      <section className="section">
+      <section className="services-sec">
         <div className="wrap">
           <div className="sec-head sec-head--center">
             <Lines className="h2" lines={[t('home.services')]} />
           </div>
           <div className="services">
-            {(['video', 'reserve', 'size', 'wholesale'] as const).map((k) => (
+            {(['video', 'boutique', 'size', 'care'] as const).map((k) => (
               <div key={k} className="svc" data-reveal>
                 <svg className="svc__icon" viewBox="0 0 24 24">{SVC_ICONS[k]}</svg>
                 <h3>{t(`svc.${k}.t`)}</h3>
@@ -138,6 +155,7 @@ export default function Home() {
         <div className="boutique__info">
           <span className="kicker" data-reveal>{t('home.boutique.kicker')}</span>
           <Lines className="h2" lines={[t('home.boutique.title')]} />
+          <p data-reveal className="muted">{t('boutique.text')}</p>
           <p className="addr" data-reveal>BLACK DIAMOND<br />{t('boutique.address')}</p>
           <div className="boutique__actions" data-reveal>
             <a href={MAPS} target="_blank" rel="noopener" className="btn btn--dark">{t('boutique.route')}</a>

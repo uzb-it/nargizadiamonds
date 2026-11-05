@@ -1,11 +1,11 @@
-import type { Lang, Product } from './types';
+import type { Product } from './types';
 
 export function money(n: number): string {
   return '$' + n.toLocaleString('ru-RU').replace(/ /g, ' ');
 }
 
-export const pname = (p: { name_ru: string; name_uz: string }, lang: Lang) => (lang === 'uz' ? p.name_uz : p.name_ru);
-export const pdesc = (p: Product, lang: Lang) => (lang === 'uz' ? p.desc_uz : p.desc_ru);
+export const pname = (p: { name_ru: string }) => p.name_ru;
+export const pdesc = (p: Product) => p.desc_ru;
 
 export function slugify(s: string): string {
   const map: Record<string, string> = {

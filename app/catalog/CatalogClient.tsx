@@ -6,11 +6,12 @@ import gsap from 'gsap';
 import { CATEGORIES, METALS, STONES, type Category, type Metal, type Product, type Stone } from '@/lib/types';
 import { ProductCard } from '@/components/ProductCard';
 import { useLang, useProducts } from '@/components/providers';
-import { Lines } from '@/components/Motion';
 
 type PriceKey = 'any' | 'u1500' | '1500-3000' | 'o3000';
 type SortKey = 'featured' | 'priceAsc' | 'priceDesc' | 'new';
 const PRICES: PriceKey[] = ['any', 'u1500', '1500-3000', 'o3000'];
+// 4 000 items: render one page at a time, the rest on «Показать ещё»
+const PAGE = 24;
 
 const inPrice = (p: Product, k: PriceKey) => {
   if (k === 'any') return true;
@@ -36,6 +37,7 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
   const [price, setPrice] = useState<PriceKey>((PRICES as string[]).includes(initial.price ?? '') ? initial.price as PriceKey : 'any');
   const [sort, setSort] = useState<SortKey>((['featured', 'priceAsc', 'priceDesc', 'new'] as string[]).includes(initial.sort ?? '') ? initial.sort as SortKey : 'featured');
   const [panel, setPanel] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
   const grid = useRef<HTMLDivElement>(null);
 
   // keep URL shareable
@@ -65,11 +67,22 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
     return out;
   }, [products, category, metals, stones, price, sort]);
 
-  // animate grid on every filter change
+  // new filters start from the first page; the grid fades in again
   useEffect(() => {
+    setLimit(PAGE);
     if (!grid.current?.children.length) return;
-    gsap.fromTo(grid.current.children, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9, stagger: .05, ease: 'expo.out' });
+    gsap.fromTo(grid.current.children, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9, stagger: .04, ease: 'expo.out' });
   }, [list]);
+
+  const shown = list.slice(0, limit);
+  const more = () => {
+    const from = limit;
+    setLimit(limit + PAGE);
+    requestAnimationFrame(() => {
+      const fresh = grid.current ? Array.from(grid.current.children).slice(from) : [];
+      if (fresh.length) gsap.fromTo(fresh, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9, stagger: .04, ease: 'expo.out' });
+    });
+  };
 
   useEffect(() => { document.body.classList.toggle('no-scroll', panel); }, [panel]);
 
@@ -84,9 +97,10 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
   return (
     <div className="page">
       <div className="wrap">
-        <div className="phead">
+        <div className="phead phead--center">
           <span className="kicker">Nargiza Diamonds</span>
-          <Lines as="h1" className="h1" lines={[category === 'all' ? t('catalog.title') : t(`cat.${category}`)]} />
+          {/* plain heading: this block hydrates after the page-level scroll animations are set up */}
+          <h1 className="h1">{category === 'all' ? t('catalog.title') : t(`cat.${category}`)}</h1>
           <div className="cat-tabs">
             <button className={category === 'all' ? 'is-active' : ''} onClick={() => setCategory('all')}>{t('nav.all')}</button>
             {CATEGORIES.map((c) => (
@@ -101,7 +115,7 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
           </button>
           <div className="chips">
             {chips.map((c) => <span key={c.label} className="chip">{c.label}<button onClick={c.off} aria-label="remove">×</button></span>)}
-            {!chips.length && <span className="muted" style={{ fontSize: 12 }}>{list.length} {t('catalog.items')}</span>}
+            {!chips.length && <span className="toolbar__count">{list.length} {t('catalog.items')}</span>}
           </div>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={t('catalog.sort')}>
             {(['featured', 'priceAsc', 'priceDesc', 'new'] as const).map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
@@ -111,9 +125,16 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
         {list.length === 0 ? (
           <div className="empty">{t('catalog.empty')}<div style={{ marginTop: 24 }}><button className="btn btn--line" onClick={reset}>{t('catalog.reset')}</button></div></div>
         ) : (
-          <div className="grid" ref={grid} style={{ paddingBottom: 120 }}>
-            {list.map((p) => <ProductCard key={p.id} p={p} />)}
-          </div>
+          <>
+            <div className="grid" ref={grid}>
+              {shown.map((p) => <ProductCard key={p.id} p={p} />)}
+            </div>
+            <div className="more">
+              <p>{t('catalog.shown')} {shown.length} {t('catalog.of')} {list.length}</p>
+              <span className="more__bar"><i style={{ transform: `scaleX(${shown.length / list.length})` }} /></span>
+              {shown.length < list.length && <button className="btn btn--line" onClick={more}>{t('catalog.more')}</button>}
+            </div>
+          </>
         )}
       </div>
 

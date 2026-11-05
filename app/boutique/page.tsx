@@ -9,7 +9,7 @@ export default function BoutiquePage() {
   const { t } = useLang();
   return (
     <div className="page">
-      <div className="wrap phead">
+      <div className="wrap phead phead--center">
         <span className="kicker">{t('home.boutique.kicker')}</span>
         <Lines as="h1" className="h1" lines={['BLACK DIAMOND']} />
       </div>
@@ -19,6 +19,7 @@ export default function BoutiquePage() {
         </div>
         <div className="boutique__info">
           <Lines className="h2" lines={[t('home.boutique.title')]} />
+          <p className="muted" data-reveal>{t('boutique.text')}</p>
           <p className="addr" data-reveal>{t('boutique.address')}</p>
           <div className="pdp__specs" data-reveal style={{ margin: 0 }}>
             <div><span>Telegram</span><a href={TELEGRAM} target="_blank" rel="noopener">@nargiza_goldd</a></div>

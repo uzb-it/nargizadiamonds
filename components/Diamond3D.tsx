@@ -123,13 +123,9 @@ export function Diamond3D({ className }: { className?: string }) {
         const dist = camera.position.length();
         const visH = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist;
         const visW = visH * camera.aspect;
-        if (camera.aspect > 1.1) {
-          group.scale.setScalar(Math.min(1.35, visW * 0.21));
-          baseX = visW * 0.22; baseY = 0.55;
-        } else {
-          group.scale.setScalar(Math.min(0.9, visW * 0.36));
-          baseX = 0; baseY = visH * 0.3;
-        }
+        // centred above the headline, like a campaign shot
+        group.scale.setScalar(Math.min(0.82, visW * 0.32, visH * 0.24));
+        baseX = 0; baseY = visH * 0.25;
       };
       resize();
       const ro = new ResizeObserver(resize);
