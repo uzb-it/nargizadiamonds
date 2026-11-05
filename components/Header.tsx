@@ -31,7 +31,6 @@ export function Brand({ className = '' }: { className?: string }) {
 export function Header() {
   const { t } = useLang();
   const path = usePathname();
-  const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [mega, setMega] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -44,7 +43,6 @@ export function Header() {
       ticking = true;
       requestAnimationFrame(() => {
         const y = window.scrollY;
-        setScrolled(y > 40);
         if (Math.abs(y - last) > 6) { setHidden(y > 360 && y > last); last = y; }
         ticking = false;
       });
@@ -63,28 +61,28 @@ export function Header() {
 
   return (
     <>
-      <div className="topbar"><span>{t('topbar')}</span></div>
-      <header className={`hdr ${scrolled ? 'is-scrolled' : ''} ${hidden && !mega && !menu ? 'is-hidden' : ''}`}
+      <div className="topbar">
+        <span>{t('topbar')}</span>
+        <div className="topbar__links hide-md">
+          <Link href="/boutique">{ICON.pin}BLACK DIAMOND, {t('nav.boutique').toLowerCase()} в Ташкенте</Link>
+          <a href={TELEGRAM} target="_blank" rel="noopener">{ICON.chat}{t('nav.contact')}</a>
+        </div>
+      </div>
+      <header className={`hdr ${hidden && !mega && !menu ? 'is-hidden' : ''}`}
         onMouseLeave={() => setMega(false)}>
         <div className="hdr__row">
-          <div className="hdr__side">
-            <button className={`burger ${menu ? 'is-open' : ''}`} aria-label="Меню" onClick={() => setMenu((v) => !v)}><span /><span /></button>
-            <a href={TELEGRAM} target="_blank" rel="noopener" className="hdr__link hide-sm">{ICON.chat}<span className="hide-md">{t('nav.contact')}</span></a>
-            <Link href="/boutique" className="hdr__link hide-sm">{ICON.pin}<span className="hide-md">{t('nav.boutique')}</span></Link>
-          </div>
+          <button className={`burger ${menu ? 'is-open' : ''}`} aria-label="Меню" onClick={() => setMenu((v) => !v)}><span /><span /></button>
           <Brand />
-          <div className="hdr__side hdr__side--end">
-            <button className="hdr__link" onClick={() => setSearch(true)} aria-label={t('nav.search')}>{ICON.search}<span className="hide-md">{t('nav.search')}</span></button>
-          </div>
+          <nav className="hdr__nav">
+            <Link href="/catalog" onMouseEnter={() => setMega(true)} className={path.startsWith('/catalog') ? 'is-active' : ''}>{t('nav.jewelry')}</Link>
+            {CATEGORIES.slice(0, 4).map((c) => (
+              <Link key={c} href={`/catalog?category=${c}`} onMouseEnter={() => setMega(false)}>{c === 'necklaces' ? 'Колье' : t(`cat.${c}`)}</Link>
+            ))}
+            <Link href="/catalog?price=u1500" onMouseEnter={() => setMega(false)}>{t('nav.gifts')}</Link>
+            <Link href="/about" onMouseEnter={() => setMega(false)} className={active('/about')}>{t('nav.maison')}</Link>
+          </nav>
+          <button className="hdr__link hdr__search" onClick={() => setSearch(true)} aria-label={t('nav.search')}>{ICON.search}<span className="hide-md">{t('nav.search')}</span></button>
         </div>
-        <nav className="hdr__nav">
-          <Link href="/catalog" onMouseEnter={() => setMega(true)} className={path.startsWith('/catalog') ? 'is-active' : ''}>{t('nav.jewelry')}</Link>
-          {CATEGORIES.slice(0, 4).map((c) => (
-            <Link key={c} href={`/catalog?category=${c}`} onMouseEnter={() => setMega(false)}>{c === 'necklaces' ? 'Колье' : t(`cat.${c}`)}</Link>
-          ))}
-          <Link href="/catalog?price=u1500" onMouseEnter={() => setMega(false)}>{t('nav.gifts')}</Link>
-          <Link href="/about" onMouseEnter={() => setMega(false)} className={active('/about')}>{t('nav.maison')}</Link>
-        </nav>
         <div className={`mega ${mega ? 'is-open' : ''}`}>
           <div className="mega__inner">
             <div className="mega__col">

@@ -8,6 +8,14 @@ import Lenis from 'lenis';
 
 if (typeof window !== 'undefined') gsap.registerPlugin(ScrollTrigger);
 
+let activeLenis: Lenis | null = null;
+
+/** Scrolls with the site's smooth scroller when it is running. */
+export function scrollToTarget(target: HTMLElement | number, offset = 0) {
+  if (activeLenis) { activeLenis.scrollTo(target, { offset, duration: 1.4 }); return; }
+  window.scrollTo({ top: typeof target === 'number' ? target : target.getBoundingClientRect().top + scrollY + offset });
+}
+
 /** Smooth scrolling + scroll-driven reveals for every page. */
 export function Motion() {
   const path = usePathname();
@@ -18,11 +26,12 @@ export function Motion() {
     if (isAdmin || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const lenis = new Lenis({ duration: 1.15, easing: (x) => Math.min(1, 1.001 - Math.pow(2, -10 * x)) });
     lenisRef.current = lenis;
+    activeLenis = lenis;
     lenis.on('scroll', ScrollTrigger.update);
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
-    return () => { gsap.ticker.remove(tick); lenis.destroy(); lenisRef.current = null; };
+    return () => { gsap.ticker.remove(tick); lenis.destroy(); lenisRef.current = null; activeLenis = null; };
   }, [isAdmin]);
 
   useEffect(() => {

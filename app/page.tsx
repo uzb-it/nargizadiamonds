@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLang, useProducts } from '@/components/providers';
 import { CATEGORIES } from '@/lib/types';
 import { MAPS, TELEGRAM } from '@/lib/i18n';
-import { Diamond } from '@/components/Diamond';
+import { Hero } from '@/components/Hero';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductArt } from '@/components/ProductArt';
 import { Rail } from '@/components/Rail';
@@ -30,19 +30,7 @@ export default function Home() {
 
   return (
     <>
-      {/* HERO — full-bleed campaign with the 3D diamond */}
-      <section className="hero">
-        <Diamond className="hero__canvas" />
-        <div className="hero__inner">
-          <p className="kicker" data-intro>{t('hero.kicker')}</p>
-          <h1 className="hero__title" data-lines>
-            <span className="ln"><span>{t('hero.title1')}</span></span>
-            <span className="ln"><span><em>{t('hero.title2')}</em></span></span>
-          </h1>
-          <div data-intro><Link href="/catalog" className="link-u link-u--light">{t('hero.cta')}</Link></div>
-        </div>
-        <span className="hero__scroll" aria-hidden />
-      </section>
+      <Hero />
 
       {/* CATEGORIES */}
       <section className="section">

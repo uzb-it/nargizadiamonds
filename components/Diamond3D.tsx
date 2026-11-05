@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-/** Round brilliant cut with physically based refraction and dispersion ("fire"). */
+/** Round brilliant cut: mirror facets reflecting a high-contrast studio, the way a real stone shows black and white flashes. */
 function brilliantGeometry(): THREE.BufferGeometry {
   const seg = 16;
   const table = 0.56, crownH = 0.33, girdleR = 1, girdleH = 0.04, pavD = 0.86;
@@ -47,8 +46,77 @@ function brilliantGeometry(): THREE.BufferGeometry {
   return g;
 }
 
-export function Diamond3D({ className }: { className?: string }) {
+/** Bright room with hard softboxes, dark flags and a few tinted panels for the "fire": this contrast is what makes facets sparkle. */
+function studioScene(): THREE.Scene {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x9ca0aa);
+  const tints = [0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffd9a0, 0xa8c8ff, 0xffb0c8];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const box = new THREE.BoxGeometry(1, 1, 1);
+  for (let i = 0; i < 110; i++) {
+    const flag = i % 3 === 0;
+    const color = flag ? new THREE.Color(0x08080a) : new THREE.Color(tints[i % tints.length]).multiplyScalar(3 + rnd() * 9);
+    const m = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color }));
+    const y = rnd() * 2 - 1, a = rnd() * Math.PI * 2, r = Math.sqrt(1 - y * y);
+    m.position.set(Math.cos(a) * r * 9, y * 9, Math.sin(a) * r * 9);
+    m.scale.set(0.6 + rnd() * 1.9, 0.6 + rnd() * 1.9, 0.2);
+    m.lookAt(0, 0, 0);
+    scene.add(m);
+  }
+  return scene;
+}
+
+/** Gold band and four claws for the sapphire ring slide. */
+function ringSetting(): { group: THREE.Group; material: THREE.Material; dispose: () => void } {
+  const material = new THREE.MeshStandardMaterial({ color: 0xd9b36a, metalness: 1, roughness: 0.16 });
+  const group = new THREE.Group();
+  const band = new THREE.TorusGeometry(1, 0.075, 20, 120);
+  const bandMesh = new THREE.Mesh(band, material);
+  bandMesh.position.y = -1.32;
+  bandMesh.scale.z = 2; // flat wide shank
+  group.add(bandMesh);
+  const geos: THREE.BufferGeometry[] = [band];
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    const from = new THREE.Vector3(Math.cos(a) * 0.14, -0.36, Math.sin(a) * 0.14);
+    const to = new THREE.Vector3(Math.cos(a) * 0.56, 0.1, Math.sin(a) * 0.56);
+    const dir = to.clone().sub(from);
+    const claw = new THREE.CylinderGeometry(0.03, 0.05, dir.length(), 10);
+    const mesh = new THREE.Mesh(claw, material);
+    mesh.position.copy(from).addScaledVector(dir, 0.5);
+    mesh.quaternion.setFromUnitVectors(up, dir.normalize());
+    group.add(mesh);
+    geos.push(claw);
+  }
+  return { group, material, dispose: () => { geos.forEach((g) => g.dispose()); material.dispose(); } };
+}
+
+/** Soft contact shadow, so the stone stands on the light background instead of floating on it. */
+function shadowTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(40,34,26,.3)');
+  g.addColorStop(0.5, 'rgba(40,34,26,.08)');
+  g.addColorStop(1, 'rgba(40,34,26,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
+const WHITE = new THREE.Color(0xffffff);
+const SAPPHIRE = new THREE.Color(0x4f78ff);
+const SAPPHIRE_GLOW = new THREE.Color(0x10268f);
+
+export function Diamond3D({ className, layout = 'center', slide = 0 }: { className?: string; layout?: 'hero' | 'center'; slide?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const slideRef = useRef(slide);
+  const redraw = useRef<() => void>(() => {});
+  slideRef.current = slide;
+  useEffect(() => { redraw.current(); }, [slide]);
 
   useEffect(() => {
     const canvas = ref.current!;
@@ -68,44 +136,53 @@ export function Diamond3D({ className }: { className?: string }) {
       }
       const coarse = matchMedia('(pointer: coarse)').matches;
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      // Quality tiers: 'high' = real refraction + dispersion (needs a strong GPU),
-      // 'low' = env-mapped facets without the extra transmission pass, 1x resolution, 30 fps,
-      // 'min' = same look at reduced resolution and 15 fps for devices without real GPU power.
+      // Quality tiers: 'high' = up to 1.75x resolution at full frame rate, 'low' = 1x resolution, 30 fps,
+      // 'min' = reduced resolution and 15 fps for devices without real GPU power.
       let tier: 'high' | 'low' | 'min' = coarse ? 'low' : 'high';
       renderer.setPixelRatio(tier === 'high' ? Math.min(devicePixelRatio, 1.75) : 1);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.25;
+      renderer.toneMappingExposure = 1.2;
 
       const scene = new THREE.Scene();
       const pmrem = new THREE.PMREMGenerator(renderer);
-      scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.02).texture;
+      const studio = studioScene();
+      scene.environment = pmrem.fromScene(studio, 0.025).texture;
 
       const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
       camera.position.set(0, 1.6, 5.2);
       camera.lookAt(0, 0, 0);
 
       const geo = brilliantGeometry();
-      const highMat = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff, metalness: 0, roughness: 0, transmission: 1, thickness: 1.6, ior: 2.42,
-        dispersion: 6, specularIntensity: 1, envMapIntensity: 2.2, flatShading: true,
-        iridescence: 0.25, iridescenceIOR: 1.6, clearcoat: 1, clearcoatRoughness: 0, side: THREE.DoubleSide,
+      // the far side of the stone seen through the crown: gives the depth of a real cut without a costly refraction pass
+      const innerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.04, flatShading: true, side: THREE.BackSide });
+      const outerMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, metalness: 1, roughness: 0.03, flatShading: true, transparent: true, opacity: 0.58,
+        iridescence: 0.7, iridescenceIOR: 1.8, depthWrite: false,
       });
-      const lowMat = new THREE.MeshPhysicalMaterial({
-        color: 0xf4f8ff, metalness: 0.15, roughness: 0, ior: 2.42, specularIntensity: 1, envMapIntensity: 3.4,
-        flatShading: true, clearcoat: 1, clearcoatRoughness: 0, transparent: true, opacity: 0.94,
-      });
-      const gem = new THREE.Mesh(geo, tier === 'high' ? highMat : lowMat);
+      const inner = new THREE.Mesh(geo, innerMat);
+      const outer = new THREE.Mesh(geo, outerMat);
       const setTier = (next: 'low' | 'min') => {
         tier = next;
-        gem.material = lowMat;
         renderer.setPixelRatio(next === 'low' ? 1 : 0.7);
         resize();
       };
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 10), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 }));
+      const setting = ringSetting();
+      setting.group.visible = false;
+      const gem = new THREE.Group();
+      gem.add(inner, outer);
       const group = new THREE.Group();
-      group.add(gem, edges);
-      group.rotation.x = 0.32;
+      group.add(gem, setting.group);
+      group.rotation.x = 0.02;
       scene.add(group);
+
+      const shadowTex = shadowTexture();
+      const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, toneMapped: false });
+      const shadowGeo = new THREE.PlaneGeometry(1, 1);
+      const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.visible = layout === 'hero';
+      shadow.renderOrder = -1;
+      scene.add(shadow);
 
       const lights = [0xffffff, 0xffe2b0, 0xbfd8ff].map((c, i) => {
         const l = new THREE.PointLight(c, 18, 12);
@@ -114,7 +191,7 @@ export function Diamond3D({ className }: { className?: string }) {
         return l;
       });
 
-      let w = 0, h = 0, baseX = 0, baseY = 0;
+      let w = 0, h = 0, baseX = 0, baseY = 0, baseS = 1;
       const resize = () => {
         w = canvas.clientWidth; h = canvas.clientHeight;
         renderer.setSize(w, h, false);
@@ -123,9 +200,10 @@ export function Diamond3D({ className }: { className?: string }) {
         const dist = camera.position.length();
         const visH = 2 * Math.tan((camera.fov * Math.PI) / 360) * dist;
         const visW = visH * camera.aspect;
-        // centred above the headline, like a campaign shot
-        group.scale.setScalar(Math.min(0.82, visW * 0.32, visH * 0.24));
-        baseX = 0; baseY = visH * 0.25;
+        const wide = camera.aspect > 1.1;
+        if (layout === 'center') { baseS = Math.min(0.9, visW * 0.3, visH * 0.28); baseX = 0; baseY = 0; }
+        else if (wide) { baseS = Math.min(0.92, visH * 0.31); baseX = visW * 0.2; baseY = 0.1; }
+        else { baseS = Math.min(0.72, visW * 0.3, visH * 0.19); baseX = 0; baseY = visH * 0.2; }
       };
       resize();
       const ro = new ResizeObserver(resize);
@@ -153,7 +231,25 @@ export function Diamond3D({ className }: { className?: string }) {
       io.observe(canvas);
 
       const clock = new THREE.Clock();
-      let spin = 0, intro = 0, raf = 0, last = 0;
+      let spin = 0, intro = 0, raf = 0, last = 0, morph = slideRef.current;
+      // slide 2 turns the stone into a sapphire set in a gold ring
+      const pose = () => {
+        const s = baseS * (1 - 0.08 * morph);
+        group.scale.setScalar(s);
+        group.position.x = baseX;
+        const color = WHITE.clone().lerp(SAPPHIRE, morph);
+        innerMat.color.copy(color);
+        outerMat.color.copy(color);
+        innerMat.emissive.copy(SAPPHIRE_GLOW).multiplyScalar(morph);
+        setting.group.visible = morph > 0.01;
+        setting.group.scale.setScalar(0.85 + morph * 0.15);
+        (setting.material as THREE.MeshStandardMaterial).opacity = morph;
+        setting.material.transparent = morph < 0.99;
+        const lift = morph * 1.05 * s;
+        shadow.position.set(baseX, baseY - 1.3 * baseS, 0);
+        shadow.scale.setScalar(baseS * 2.5);
+        return lift;
+      };
       // frame-time probe: after ~1 s at a tier, step down if frames are too slow
       let probeStart = 0, probeFrames = 0, probeSum = 0;
       const probe = (now: number, frameMs: number) => {
@@ -185,13 +281,16 @@ export function Diamond3D({ className }: { className?: string }) {
         spin += (0.0035 + vel) * dt;
         vel *= Math.pow(0.94, dt);
         const k = 1 - Math.pow(0.95, dt);
-        group.rotation.y = spin + (1 - e) * 2.5;
-        group.rotation.x += (0.32 + mouse.y * 0.35 - group.rotation.x) * k;
+        // the stone turns; the ring sways facing the viewer so the band never shows edge-on
+        const sway = 0.55 + Math.sin(t * 0.5) * 0.35;
+        group.rotation.y = (spin % (Math.PI * 2)) * (1 - morph) + sway * morph + (1 - e) * 2.5;
+        group.rotation.x += (0.02 + morph * 0.26 + mouse.y * 0.3 - group.rotation.x) * k;
         group.rotation.z += (-mouse.x * 0.2 - group.rotation.z) * k;
-        group.position.x = baseX;
-        group.position.y = baseY + Math.sin(t * 1.1) * 0.05 - (1 - e) * 0.6;
-        gem.scale.setScalar(0.6 + e * 0.4);
-        edges.scale.copy(gem.scale);
+        morph += (slideRef.current - morph) * (1 - Math.pow(0.93, dt));
+        const lift = pose();
+        group.position.y = baseY + lift + Math.sin(t * 1.1) * 0.04 - (1 - e) * 0.6;
+        gem.scale.setScalar((0.6 + e * 0.4) * (1 - 0.42 * morph));
+        gem.rotation.y = spin * morph;
         lights.forEach((l, i) => {
           const a = t * (0.5 + i * 0.13) + l.userData.phase;
           l.position.set(Math.cos(a) * 3, 1.5 + Math.sin(a * 1.3) * 1.5, Math.sin(a) * 3);
@@ -203,7 +302,12 @@ export function Diamond3D({ className }: { className?: string }) {
         if (cancelled) return;
         canvas.style.opacity = '1';
         clock.start();
-        if (reduced) { group.position.set(baseX, baseY, 0); renderer.render(scene, camera); return; }
+        if (reduced) {
+          // no motion: the slide change is applied at once
+          redraw.current = () => { morph = slideRef.current; group.position.y = baseY + pose(); renderer.render(scene, camera); };
+          redraw.current();
+          return;
+        }
         raf = requestAnimationFrame(loop);
       });
 
@@ -215,7 +319,10 @@ export function Diamond3D({ className }: { className?: string }) {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('scroll', onScroll);
         canvas.removeEventListener('pointerdown', down);
-        geo.dispose(); highMat.dispose(); lowMat.dispose(); pmrem.dispose(); renderer.dispose();
+        geo.dispose(); innerMat.dispose(); outerMat.dispose(); setting.dispose();
+        shadowGeo.dispose(); shadowMat.dispose(); shadowTex.dispose();
+        studio.traverse((o) => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } });
+        pmrem.dispose(); renderer.dispose();
       };
     }
 
@@ -224,7 +331,7 @@ export function Diamond3D({ className }: { className?: string }) {
       if (hasIdle) window.cancelIdleCallback(handle); else clearTimeout(handle);
       cleanup();
     };
-  }, []);
+  }, [layout]);
 
   return <canvas ref={ref} className={className} style={{ opacity: 0, transition: 'opacity 1.6s cubic-bezier(.19,1,.22,1)' }} />;
 }

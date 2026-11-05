@@ -5,6 +5,7 @@ data/uploads
 .env
 .next-build
 .next-prod
+.next-dev
 tsconfig.tsbuildinfo
 .claude
 *.log
