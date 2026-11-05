@@ -34,6 +34,7 @@ const ru = {
   'catalog.title': 'Все украшения', 'catalog.items': 'изделий', 'catalog.filters': 'Фильтры',
   'catalog.metal': 'Металл', 'catalog.stone': 'Камень', 'catalog.price': 'Цена', 'catalog.sort': 'Сортировка',
   'sort.featured': 'Рекомендуемые', 'sort.priceAsc': 'Цена по возрастанию', 'sort.priceDesc': 'Цена по убыванию', 'sort.new': 'Новинки',
+  'catalog.loading': 'Загружаем украшения…', 'catalog.failed': 'Не удалось загрузить каталог. Обновите страницу.',
   'catalog.reset': 'Сбросить', 'catalog.empty': 'Нет изделий по выбранным фильтрам', 'catalog.show': 'Показать',
   'catalog.more': 'Показать ещё', 'catalog.shown': 'Показано',  'catalog.of': 'из',
   'price.any': 'Любая', 'price.u1500': 'До $1 500', 'price.1500-3000': '$1 500 – $3 000', 'price.o3000': 'От $3 000',

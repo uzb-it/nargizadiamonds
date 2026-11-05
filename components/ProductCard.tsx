@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { Product } from '@/lib/types';
+import type { Product, ProductSummary } from '@/lib/types';
 import { money, pname } from '@/lib/format';
 import { ProductArt } from './ProductArt';
 import { useLang } from './providers';
@@ -18,7 +18,7 @@ export function Price({ value }: { value: number | null }) {
   return <>{value === null ? t('price.request') : money(value)}</>;
 }
 
-export function ProductCard({ p }: { p: Product }) {
+export function ProductCard({ p }: { p: ProductSummary }) {
   const { t } = useLang();
   return (
     <Link href={`/product/${p.slug}`} className="pcard">

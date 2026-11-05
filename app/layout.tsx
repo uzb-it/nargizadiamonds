@@ -20,7 +20,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Motion } from '@/components/Motion';
 import { ArtDefs } from '@/components/ProductArt';
-import { listProducts } from '@/lib/db';
+import { listHomeProducts } from '@/lib/db';
 
 export const metadata: Metadata = {
   title: { default: 'Nargiza Diamonds — бриллианты Гонконг 750 · Ташкент', template: '%s · Nargiza Diamonds' },
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body suppressHydrationWarning>
         <ArtDefs />
-        <Providers products={listProducts()}>
+        <Providers products={listHomeProducts()}>
           <Header />
           <main>{children}</main>
           <Footer />

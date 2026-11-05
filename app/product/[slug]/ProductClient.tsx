@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import type { Product } from '@/lib/types';
+import type { Product, ProductSummary } from '@/lib/types';
 import { pdesc, pname } from '@/lib/format';
 import { MAPS, TELEGRAM } from '@/lib/i18n';
 import { useLang } from '@/components/providers';
@@ -23,7 +23,7 @@ function Accordion({ items }: { items: { title: string; body: string }[] }) {
   );
 }
 
-export function ProductClient({ p, related }: { p: Product; related: Product[] }) {
+export function ProductClient({ p, related }: { p: Product; related: ProductSummary[] }) {
   const { t } = useLang();
   const [zoom, setZoom] = useState<number | null>(null);
   const name = pname(p);

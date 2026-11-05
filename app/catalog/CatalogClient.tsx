@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import gsap from 'gsap';
-import { CATEGORIES, METALS, STONES, type Category, type Metal, type Product, type Stone } from '@/lib/types';
+import { CATEGORIES, METALS, STONES, type Category, type Metal, type ProductSummary, type Stone } from '@/lib/types';
 import { ProductCard } from '@/components/ProductCard';
-import { useLang, useProducts } from '@/components/providers';
+import { useAllProducts, useLang } from '@/components/providers';
 
 type PriceKey = 'any' | 'u1500' | '1500-3000' | 'o3000';
 type SortKey = 'featured' | 'priceAsc' | 'priceDesc' | 'new';
@@ -13,7 +13,7 @@ const PRICES: PriceKey[] = ['any', 'u1500', '1500-3000', 'o3000'];
 // 4 000 items: render one page at a time, the rest on «Показать ещё»
 const PAGE = 24;
 
-const inPrice = (p: Product, k: PriceKey) => {
+const inPrice = (p: ProductSummary, k: PriceKey) => {
   if (k === 'any') return true;
   if (p.price === null) return false;
   if (k === 'u1500') return p.price <= 1500;
@@ -24,12 +24,12 @@ const inPrice = (p: Product, k: PriceKey) => {
 /** Reads filters from the URL; remounts on real navigation (e.g. header menu → another category). */
 export function CatalogEntry() {
   const sp = useSearchParams();
-  const products = useProducts();
+  const { list, failed } = useAllProducts();
   const initial = Object.fromEntries(sp.entries());
-  return <CatalogClient key={sp.toString()} products={products} initial={initial} />;
+  return <CatalogClient key={sp.toString()} products={list} failed={failed} initial={initial} />;
 }
 
-function CatalogClient({ products, initial }: { products: Product[]; initial: Record<string, string | undefined> }) {
+function CatalogClient({ products, failed, initial }: { products: ProductSummary[] | null; failed: boolean; initial: Record<string, string | undefined> }) {
   const { t } = useLang();
   const [category, setCategory] = useState<Category | 'all'>((CATEGORIES as string[]).includes(initial.category ?? '') ? initial.category as Category : 'all');
   const [metals, setMetals] = useState<Metal[]>((initial.metal?.split(',') ?? []).filter((m): m is Metal => (METALS as string[]).includes(m)));
@@ -55,12 +55,12 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
   }, [category, metals, stones, price, sort]);
 
   const list = useMemo(() => {
-    const out = products.filter((p) =>
+    const out = (products ?? []).filter((p) =>
       (category === 'all' || p.category === category) &&
       (!metals.length || metals.includes(p.metal)) &&
       (!stones.length || stones.includes(p.stone)) &&
       inPrice(p, price));
-    const pr = (p: Product) => p.price ?? Number.MAX_SAFE_INTEGER;
+    const pr = (p: ProductSummary) => p.price ?? Number.MAX_SAFE_INTEGER;
     if (sort === 'priceAsc') out.sort((a, b) => pr(a) - pr(b));
     if (sort === 'priceDesc') out.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
     if (sort === 'new') out.sort((a, b) => b.id - a.id);
@@ -115,14 +115,16 @@ function CatalogClient({ products, initial }: { products: Product[]; initial: Re
           </button>
           <div className="chips">
             {chips.map((c) => <span key={c.label} className="chip">{c.label}<button onClick={c.off} aria-label="remove">×</button></span>)}
-            {!chips.length && <span className="toolbar__count">{list.length} {t('catalog.items')}</span>}
+            {!chips.length && products && <span className="toolbar__count">{list.length} {t('catalog.items')}</span>}
           </div>
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label={t('catalog.sort')}>
             {(['featured', 'priceAsc', 'priceDesc', 'new'] as const).map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
           </select>
         </div>
 
-        {list.length === 0 ? (
+        {!products ? (
+          <div className="empty">{failed ? t('catalog.failed') : t('catalog.loading')}</div>
+        ) : list.length === 0 ? (
           <div className="empty">{t('catalog.empty')}<div style={{ marginTop: 24 }}><button className="btn btn--line" onClick={reset}>{t('catalog.reset')}</button></div></div>
         ) : (
           <>

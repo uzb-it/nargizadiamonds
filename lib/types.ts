@@ -29,6 +29,9 @@ export interface Product {
   created_at: string;
 }
 
+/** What cards, the catalogue and search need; full text stays on the product page. */
+export type ProductSummary = Pick<Product, 'id' | 'slug' | 'name_ru' | 'category' | 'metal' | 'stone' | 'carat' | 'price' | 'images' | 'art' | 'featured' | 'in_stock'>;
+
 export interface CartItem {
   id: number;
   slug: string;

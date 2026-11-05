@@ -2,10 +2,10 @@ import 'server-only';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Order, OrderStatus, Product } from './types';
+import type { Order, OrderStatus, Product, ProductSummary } from './types';
 import { SEED_PRODUCTS } from './seed';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 
 const g = globalThis as unknown as { __ndDb?: DatabaseSync };
@@ -66,6 +66,34 @@ function toProduct(r: Row): Product {
 
 export function listProducts(): Product[] {
   return (open().prepare('SELECT * FROM products ORDER BY featured DESC, id ASC').all() as Row[]).map(toProduct);
+}
+
+const SUMMARY = `SELECT id, slug, name_ru, category, metal, stone, carat, price, images, art, featured, in_stock FROM products`;
+
+function toSummary(r: Row): ProductSummary {
+  return { ...(r as unknown as ProductSummary), images: JSON.parse(r.images as string).slice(0, 2), featured: !!r.featured, in_stock: !!r.in_stock };
+}
+
+/** Whole catalogue without long texts: served once as /products.json for the catalogue page and search. */
+export function listProductSummaries(): ProductSummary[] {
+  return (open().prepare(`${SUMMARY} ORDER BY featured DESC, id ASC`).all() as Row[]).map(toSummary);
+}
+
+/** The few products the home page and search suggestions show; goes into the HTML of every page. */
+export function listHomeProducts(): ProductSummary[] {
+  const db = open();
+  const rows = [
+    `${SUMMARY} WHERE featured = 1 ORDER BY id ASC LIMIT 12`,
+    `${SUMMARY} WHERE price <= 1500 ORDER BY featured DESC, id ASC LIMIT 4`,
+    `${SUMMARY} WHERE stone != 'diamond' ORDER BY featured DESC, id ASC LIMIT 4`,
+  ].flatMap((sql) => db.prepare(sql).all() as Row[]);
+  const byId = new Map(rows.map((r) => [r.id as number, toSummary(r)]));
+  return [...byId.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.id - b.id);
+}
+
+export function listRelated(p: Pick<Product, 'id' | 'category'>): ProductSummary[] {
+  const rows = open().prepare(`${SUMMARY} WHERE id != ? ORDER BY category = ? DESC, featured DESC, id ASC LIMIT 4`).all(p.id, p.category) as Row[];
+  return rows.map(toSummary);
 }
 
 export function getProduct(slug: string): Product | null {

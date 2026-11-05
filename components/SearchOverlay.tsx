@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORIES } from '@/lib/types';
 import { pname } from '@/lib/format';
-import { useLang, useProducts } from './providers';
+import { useAllProducts, useLang, useProducts } from './providers';
 import { Price, ProductMedia } from './ProductCard';
 
 export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useLang();
   const [q, setQ] = useState('');
-  const all = useProducts();
+  const featured = useProducts();
+  const { list } = useAllProducts(open);
+  const all = list ?? featured;
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -27,9 +29,9 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
 
   const results = useMemo(() => {
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!words.length) return all.filter((p) => p.featured).slice(0, 4);
+    if (!words.length) return featured.filter((p) => p.featured).slice(0, 4);
     return index.filter(([, s]) => words.every((w) => s.includes(w))).slice(0, 8).map(([p]) => p);
-  }, [all, index, q]);
+  }, [featured, index, q]);
 
   return (
     <div className={`search ${open ? 'is-open' : ''}`} aria-hidden={!open}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import type { Product } from '@/lib/types';
 import { CATEGORIES, METALS, STONES } from '@/lib/types';
 import { ART_KEYS, ProductArt } from '@/components/ProductArt';
@@ -21,15 +21,18 @@ export function ProductForm({ p }: { p?: Product }) {
   const [previews, setPreviews] = useState<string[]>([]);
 
   return (
-    <form action={action} className="adm-form">
+    // submitted by hand: <form action> clears every field when the server returns an error
+    <form className="adm-form" onSubmit={(e) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      startTransition(() => action(fd));
+    }}>
       {p && <input type="hidden" name="id" value={p.id} />}
       <div className="adm-form__grid">
         <div className="adm-card">
           <h2>Основное</h2>
-          <div className="field"><label>Название (RU) *</label><input name="name_ru" defaultValue={p?.name_ru} required /></div>
-          <div className="field"><label>Название (UZ)</label><input name="name_uz" defaultValue={p?.name_uz} /></div>
-          <div className="field"><label>Описание (RU)</label><textarea name="desc_ru" defaultValue={p?.desc_ru} rows={4} /></div>
-          <div className="field"><label>Описание (UZ)</label><textarea name="desc_uz" defaultValue={p?.desc_uz} rows={4} /></div>
+          <div className="field"><label>Название *</label><input name="name_ru" defaultValue={p?.name_ru} required /></div>
+          <div className="field"><label>Описание</label><textarea name="desc_ru" defaultValue={p?.desc_ru} rows={4} /></div>
           <div className="field"><label>Адрес страницы (slug)</label><input name="slug" defaultValue={p?.slug} placeholder="создастся из названия" /></div>
         </div>
 

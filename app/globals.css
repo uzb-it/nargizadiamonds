@@ -521,6 +521,10 @@ img, svg { display: block; max-width: 100%; }
 .adm-art { aspect-ratio: 1; background: var(--tile); display: grid; place-items: center; cursor: pointer; border: 1px solid transparent; transition: border-color .3s; }
 .adm-art .art { width: 80%; }
 .adm-art.is-on { border-color: var(--ink); background: #e4ddd1; }
+.adm-search { display: flex; gap: 12px; margin-bottom: 20px; }
+.adm-search input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--paper); padding: 12px 14px; font-size: 15px; outline: none; }
+.adm-search input:focus { border-color: var(--ink); }
+.adm-pager { display: flex; justify-content: center; align-items: center; gap: 24px; padding: 24px 0; font-size: 13px; color: var(--muted); }
 .adm-form__bar { position: sticky; bottom: 0; padding: 16px 0; margin-top: 16px; background: linear-gradient(transparent, var(--ivory) 30%); }
 @media (max-width: 900px) {
   .adm { grid-template-columns: 1fr; }
