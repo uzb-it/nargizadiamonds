@@ -27,12 +27,12 @@ export const metadata: Metadata = {
   description: 'Ювелирный дом Nargiza Diamonds: бриллианты из Гонконга, золото 750 пробы. Бутик BLACK DIAMOND, ювелирный центр Алиева, метро Новза, Ташкент.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
       <body suppressHydrationWarning>
         <ArtDefs />
-        <Providers products={listHomeProducts()}>
+        <Providers products={await listHomeProducts()}>
           <Header />
           <main>{children}</main>
           <Footer />

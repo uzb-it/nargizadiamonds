@@ -4,9 +4,9 @@ import { updateOrderStatus } from '../../actions';
 
 const STATUS: Record<string, string> = { new: 'Новый', confirmed: 'Подтверждён', done: 'Выполнен', cancelled: 'Отменён' };
 
-export default function AdminOrders() {
-  const orders = listOrders();
-  const products = listProducts();
+export default async function AdminOrders() {
+  const orders = await listOrders();
+  const products = await listProducts();
   const open = orders.filter((o) => o.status === 'new').length;
   const revenue = orders.filter((o) => o.status === 'done').reduce((s, o) => s + o.total, 0);
 

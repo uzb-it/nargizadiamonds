@@ -10,7 +10,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const q = (sp.q ?? '').trim();
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const found = listProducts().filter((p) => {
+  const found = (await listProducts()).filter((p) => {
     const text = `${p.name_ru} ${p.slug} ${CAT[p.category]} nd-${String(p.id).padStart(4, '0')}`.toLowerCase();
     return words.every((w) => text.includes(w));
   });

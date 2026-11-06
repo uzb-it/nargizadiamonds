@@ -2,6 +2,7 @@ node_modules
 .next
 data/*.db*
 data/uploads
+data/postgres
 .env
 .next-build
 .next-prod

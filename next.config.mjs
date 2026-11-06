@@ -1,6 +1,6 @@
 /**
  * Two build modes:
- *  - default: full store with SQLite, admin panel and order API (`npm run build`).
+ *  - default: full store with PostgreSQL, admin panel and order API (`npm run build`).
  *  - STATIC_EXPORT=1: static site for GitHub Pages (`npm run build:pages`) — no server,
  *    orders are sent to Telegram, admin is left out (files named *.server.ts(x) are skipped).
  */

@@ -1,6 +1,6 @@
 # Nargiza Diamonds — сайт-витрина (пакет «Старт»)
 
-Next.js 15 · React 19 · SQLite (встроенный `node:sqlite`) · Three.js · GSAP · Lenis. Только русский язык.
+Next.js 15 · React 19 · PostgreSQL · Three.js · GSAP · Lenis. Только русский язык.
 
 Пакет «Старт»: сайт с анимацией, каталог с фильтрами и поиском, удобно на телефоне и планшете.
 Корзины, оформления заказа, избранного, оптовой заявки и других языков нет — это пакет «Продажи».
@@ -13,7 +13,7 @@ cp .env.example .env      # задайте ADMIN_PASSWORD и SESSION_SECRET
 npm run dev               # http://localhost:3010
 ```
 
-Продакшн: `npm run build && npm start`. Нужен Node.js 22.5+ (используется `node:sqlite`).
+Продакшн: `npm run build && npm start`. Нужны Node.js 22+ и PostgreSQL, адрес базы задаётся в `DATABASE_URL` (`.env`). Для разработки `npm run db:start` поднимает отдельную базу проекта в `data/postgres`, порт 5544.
 
 ## GitHub Pages
 
@@ -38,6 +38,6 @@ GitHub Pages не запускает сервер, поэтому товары �
 | `/about`, `/boutique` | о ювелирном доме, бутик BLACK DIAMOND с картой |
 | `/admin` | только в полной версии: вход по паролю, товары и фото |
 
-- База и загруженные фото лежат в `data/` (`store.db`, `uploads/`). Делайте её резервную копию.
+- Товары лежат в PostgreSQL, загруженные фото в `data/uploads/`. Резервная копия: `pg_dump` базы и эта папка.
 - При первом запуске база заполняется 16 изделиями. Цены у Cascade, Inside-Out, Rivière, Eternity взяты из Instagram, остальные — примерные: проверьте их в админке.
 - Пока у товара нет фото, показывается SVG-иллюстрация (её можно выбрать в форме товара).

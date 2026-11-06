@@ -6,7 +6,7 @@ import { ProductForm } from '../ProductForm';
 import { ConfirmButton } from '@/components/ConfirmButton';
 
 export default async function EditProduct({ params }: { params: Promise<{ id: string }> }) {
-  const p = getProductById(Number((await params).id));
+  const p = await getProductById(Number((await params).id));
   if (!p) notFound();
   return (
     <>

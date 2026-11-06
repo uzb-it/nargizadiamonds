@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+npm run db:start
 npm run build:pages
 
 REMOTE=$(git remote get-url origin)

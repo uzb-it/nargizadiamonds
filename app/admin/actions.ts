@@ -25,7 +25,7 @@ export async function updateOrderStatus(fd: FormData) {
   await requireAdmin();
   const status = String(fd.get('status')) as OrderStatus;
   if (!['new', 'confirmed', 'done', 'cancelled'].includes(status)) return;
-  setOrderStatus(Number(fd.get('id')), status);
+  await setOrderStatus(Number(fd.get('id')), status);
   revalidatePath('/admin/orders');
 }
 
@@ -38,6 +38,7 @@ async function storeUploads(files: File[]): Promise<string[]> {
     const ext = path.extname(f.name).toLowerCase();
     if (!ALLOWED.has(ext) || f.size > 12 * 1024 * 1024) continue;
     const name = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
     await fs.writeFile(path.join(UPLOAD_DIR, name), Buffer.from(await f.arrayBuffer()));
     out.push(`/media/${name}`);
   }
@@ -52,7 +53,7 @@ async function removeUploads(urls: string[]) {
 export async function saveProductAction(_: unknown, fd: FormData) {
   await requireAdmin();
   const id = Number(fd.get('id')) || undefined;
-  const existing = id ? getProductById(id) : null;
+  const existing = id ? await getProductById(id) : null;
   const str = (k: string) => String(fd.get(k) ?? '').trim();
   const name_ru = str('name_ru');
   if (!name_ru) return { error: 'Укажите название' };
@@ -68,7 +69,7 @@ export async function saveProductAction(_: unknown, fd: FormData) {
   const uploaded = await storeUploads(fd.getAll('images') as File[]);
 
   try {
-    saveProduct({
+    await saveProduct({
       slug: slugify(str('slug') || name_ru),
       name_ru, name_uz: existing?.name_uz || name_ru,
       desc_ru: str('desc_ru'), desc_uz: existing?.desc_uz || str('desc_ru'),
@@ -84,7 +85,7 @@ export async function saveProductAction(_: unknown, fd: FormData) {
       sizes: str('sizes').replace(/(\d),(\d)(?!\d)/g, '$1.$2').split(/[\s,;]+/).map(Number).filter((n) => n > 0 && n < 40),
     }, id);
   } catch (e) {
-    return { error: String(e).includes('UNIQUE') ? 'Такой адрес (slug) уже занят' : 'Ошибка сохранения' };
+    return { error: (e as { code?: string }).code === '23505' ? 'Такой адрес (slug) уже занят' : 'Ошибка сохранения' };
   }
   if (existing) await removeUploads(existing.images.filter((s) => !kept.includes(s)));
   revalidatePath('/', 'layout');
@@ -94,8 +95,8 @@ export async function saveProductAction(_: unknown, fd: FormData) {
 export async function deleteProductAction(fd: FormData) {
   await requireAdmin();
   const id = Number(fd.get('id'));
-  const existing = getProductById(id);
-  deleteProduct(id);
+  const existing = await getProductById(id);
+  await deleteProduct(id);
   if (existing) await removeUploads(existing.images);
   revalidatePath('/', 'layout');
   redirect('/admin/products');

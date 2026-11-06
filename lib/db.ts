@@ -1,147 +1,142 @@
 import 'server-only';
-import { DatabaseSync } from 'node:sqlite';
-import fs from 'node:fs';
+import { Pool, type PoolClient } from 'pg';
 import path from 'node:path';
 import type { Order, OrderStatus, Product, ProductSummary } from './types';
+import { SCHEMA } from './schema';
 import { SEED_PRODUCTS } from './seed';
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 
-const g = globalThis as unknown as { __ndDb?: DatabaseSync };
+const g = globalThis as unknown as { __ndPool?: Pool; __ndReady?: Promise<void> };
 
-function open(): DatabaseSync {
-  if (g.__ndDb) return g.__ndDb;
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const db = new DatabaseSync(path.join(DATA_DIR, 'store.db'));
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      slug TEXT UNIQUE NOT NULL,
-      name_ru TEXT NOT NULL, name_uz TEXT NOT NULL,
-      desc_ru TEXT NOT NULL DEFAULT '', desc_uz TEXT NOT NULL DEFAULT '',
-      category TEXT NOT NULL, metal TEXT NOT NULL, stone TEXT NOT NULL DEFAULT 'diamond',
-      carat REAL, price INTEGER,
-      images TEXT NOT NULL DEFAULT '[]', art TEXT NOT NULL DEFAULT 'solitaire',
-      featured INTEGER NOT NULL DEFAULT 0, in_stock INTEGER NOT NULL DEFAULT 1,
-      sizes TEXT NOT NULL DEFAULT '[]',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL DEFAULT 'order',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      name TEXT NOT NULL, phone TEXT NOT NULL,
-      delivery TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', comment TEXT NOT NULL DEFAULT '',
-      items TEXT NOT NULL DEFAULT '[]', total INTEGER NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'new', lang TEXT NOT NULL DEFAULT 'ru'
-    );
-  `);
-  const count = (db.prepare('SELECT COUNT(*) AS c FROM products').get() as { c: number }).c;
-  if (count === 0) {
-    const ins = db.prepare(`INSERT INTO products
-      (slug, name_ru, name_uz, desc_ru, desc_uz, category, metal, stone, carat, price, images, art, featured, in_stock, sizes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, ?, 1, ?)`);
-    for (const p of SEED_PRODUCTS) {
-      ins.run(p.slug, p.name_ru, p.name_uz, p.desc_ru, p.desc_uz, p.category, p.metal, p.stone,
-        p.carat, p.price, p.art, p.featured ? 1 : 0, JSON.stringify(p.sizes));
-    }
+function pool(): Pool {
+  if (g.__ndPool) return g.__ndPool;
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+  return (g.__ndPool = new Pool({ connectionString: process.env.DATABASE_URL }));
+}
+
+const INSERT = `INSERT INTO products (slug, name_ru, name_uz, desc_ru, desc_uz, category, metal, stone,
+  carat, price, images, art, featured, in_stock, sizes)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`;
+
+async function seed(c: PoolClient) {
+  for (const p of SEED_PRODUCTS) {
+    await c.query(INSERT, [p.slug, p.name_ru, p.name_uz, p.desc_ru, p.desc_uz, p.category, p.metal, p.stone,
+      p.carat, p.price, '[]', p.art, !!p.featured, true, JSON.stringify(p.sizes)]);
   }
-  g.__ndDb = db;
-  return db;
+}
+
+// Build workers start at the same time, so the schema and seed run under a lock.
+async function setup() {
+  const c = await pool().connect();
+  try {
+    await c.query('BEGIN');
+    await c.query('SELECT pg_advisory_xact_lock(7007)');
+    await c.query(SCHEMA);
+    const { rows } = await c.query('SELECT COUNT(*)::int AS c FROM products');
+    if (rows[0].c === 0) await seed(c);
+    await c.query('COMMIT');
+  } catch (e) {
+    await c.query('ROLLBACK');
+    throw e;
+  } finally {
+    c.release();
+  }
+}
+
+function ready(): Promise<void> {
+  return (g.__ndReady ??= setup().catch((e) => { g.__ndReady = undefined; throw e; }));
 }
 
 type Row = Record<string, unknown>;
 
-function toProduct(r: Row): Product {
-  return {
-    ...(r as unknown as Product),
-    images: JSON.parse(r.images as string),
-    sizes: JSON.parse(r.sizes as string),
-    featured: !!r.featured,
-    in_stock: !!r.in_stock,
-  };
+async function query(sql: string, params: unknown[] = []): Promise<Row[]> {
+  await ready();
+  return (await pool().query(sql, params)).rows;
 }
 
-export function listProducts(): Product[] {
-  return (open().prepare('SELECT * FROM products ORDER BY featured DESC, id ASC').all() as Row[]).map(toProduct);
+const iso = (v: unknown) => (v as Date).toISOString();
+
+function toProduct(r: Row): Product {
+  return { ...(r as unknown as Product), created_at: iso(r.created_at) };
+}
+
+export async function listProducts(): Promise<Product[]> {
+  return (await query('SELECT * FROM products ORDER BY featured DESC, id ASC')).map(toProduct);
 }
 
 const SUMMARY = `SELECT id, slug, name_ru, category, metal, stone, carat, price, images, art, featured, in_stock FROM products`;
 
 function toSummary(r: Row): ProductSummary {
-  return { ...(r as unknown as ProductSummary), images: JSON.parse(r.images as string).slice(0, 2), featured: !!r.featured, in_stock: !!r.in_stock };
+  return { ...(r as unknown as ProductSummary), images: (r.images as string[]).slice(0, 2) };
 }
 
 /** Whole catalogue without long texts: served once as /products.json for the catalogue page and search. */
-export function listProductSummaries(): ProductSummary[] {
-  return (open().prepare(`${SUMMARY} ORDER BY featured DESC, id ASC`).all() as Row[]).map(toSummary);
+export async function listProductSummaries(): Promise<ProductSummary[]> {
+  return (await query(`${SUMMARY} ORDER BY featured DESC, id ASC`)).map(toSummary);
 }
 
 /** The few products the home page and search suggestions show; goes into the HTML of every page. */
-export function listHomeProducts(): ProductSummary[] {
-  const db = open();
-  const rows = [
-    `${SUMMARY} WHERE featured = 1 ORDER BY id ASC LIMIT 12`,
+export async function listHomeProducts(): Promise<ProductSummary[]> {
+  const rows = (await Promise.all([
+    `${SUMMARY} WHERE featured ORDER BY id ASC LIMIT 12`,
     `${SUMMARY} WHERE price <= 1500 ORDER BY featured DESC, id ASC LIMIT 4`,
     `${SUMMARY} WHERE stone != 'diamond' ORDER BY featured DESC, id ASC LIMIT 4`,
-  ].flatMap((sql) => db.prepare(sql).all() as Row[]);
+  ].map((sql) => query(sql)))).flat();
   const byId = new Map(rows.map((r) => [r.id as number, toSummary(r)]));
   return [...byId.values()].sort((a, b) => Number(b.featured) - Number(a.featured) || a.id - b.id);
 }
 
-export function listRelated(p: Pick<Product, 'id' | 'category'>): ProductSummary[] {
-  const rows = open().prepare(`${SUMMARY} WHERE id != ? ORDER BY category = ? DESC, featured DESC, id ASC LIMIT 4`).all(p.id, p.category) as Row[];
+export async function listRelated(p: Pick<Product, 'id' | 'category'>): Promise<ProductSummary[]> {
+  const rows = await query(`${SUMMARY} WHERE id != $1 ORDER BY category = $2 DESC, featured DESC, id ASC LIMIT 4`, [p.id, p.category]);
   return rows.map(toSummary);
 }
 
-export function getProduct(slug: string): Product | null {
-  const r = open().prepare('SELECT * FROM products WHERE slug = ?').get(slug) as Row | undefined;
+export async function getProduct(slug: string): Promise<Product | null> {
+  const [r] = await query('SELECT * FROM products WHERE slug = $1', [slug]);
   return r ? toProduct(r) : null;
 }
 
-export function getProductById(id: number): Product | null {
-  const r = open().prepare('SELECT * FROM products WHERE id = ?').get(id) as Row | undefined;
+export async function getProductById(id: number): Promise<Product | null> {
+  const [r] = await query('SELECT * FROM products WHERE id = $1', [id]);
   return r ? toProduct(r) : null;
 }
 
 export type ProductInput = Omit<Product, 'id' | 'created_at'>;
 
-export function saveProduct(input: ProductInput, id?: number): number {
-  const db = open();
+export async function saveProduct(input: ProductInput, id?: number): Promise<number> {
   const vals = [input.slug, input.name_ru, input.name_uz, input.desc_ru, input.desc_uz, input.category, input.metal,
-    input.stone, input.carat, input.price, JSON.stringify(input.images), input.art, input.featured ? 1 : 0,
-    input.in_stock ? 1 : 0, JSON.stringify(input.sizes)];
+    input.stone, input.carat, input.price, JSON.stringify(input.images), input.art, input.featured,
+    input.in_stock, JSON.stringify(input.sizes)];
   if (id) {
-    db.prepare(`UPDATE products SET slug=?, name_ru=?, name_uz=?, desc_ru=?, desc_uz=?, category=?, metal=?, stone=?,
-      carat=?, price=?, images=?, art=?, featured=?, in_stock=?, sizes=? WHERE id=?`).run(...vals, id);
+    await query(`UPDATE products SET slug=$1, name_ru=$2, name_uz=$3, desc_ru=$4, desc_uz=$5, category=$6, metal=$7, stone=$8,
+      carat=$9, price=$10, images=$11, art=$12, featured=$13, in_stock=$14, sizes=$15 WHERE id=$16`, [...vals, id]);
     return id;
   }
-  const res = db.prepare(`INSERT INTO products (slug, name_ru, name_uz, desc_ru, desc_uz, category, metal, stone,
-    carat, price, images, art, featured, in_stock, sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(...vals);
-  return Number(res.lastInsertRowid);
+  const [r] = await query(INSERT, vals);
+  return r.id as number;
 }
 
-export function deleteProduct(id: number) {
-  open().prepare('DELETE FROM products WHERE id = ?').run(id);
+export async function deleteProduct(id: number) {
+  await query('DELETE FROM products WHERE id = $1', [id]);
 }
 
 function toOrder(r: Row): Order {
-  return { ...(r as unknown as Order), items: JSON.parse(r.items as string) };
+  return { ...(r as unknown as Order), created_at: iso(r.created_at) };
 }
 
-export function createOrder(o: Omit<Order, 'id' | 'created_at' | 'status'>): number {
-  const res = open().prepare(`INSERT INTO orders (type, name, phone, delivery, address, comment, items, total, lang)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(o.type, o.name, o.phone, o.delivery, o.address, o.comment,
-    JSON.stringify(o.items), o.total, o.lang);
-  return Number(res.lastInsertRowid);
+export async function createOrder(o: Omit<Order, 'id' | 'created_at' | 'status'>): Promise<number> {
+  const [r] = await query(`INSERT INTO orders (type, name, phone, delivery, address, comment, items, total, lang)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`, [o.type, o.name, o.phone, o.delivery, o.address, o.comment,
+    JSON.stringify(o.items), o.total, o.lang]);
+  return r.id as number;
 }
 
-export function listOrders(): Order[] {
-  return (open().prepare('SELECT * FROM orders ORDER BY id DESC').all() as Row[]).map(toOrder);
+export async function listOrders(): Promise<Order[]> {
+  return (await query('SELECT * FROM orders ORDER BY id DESC')).map(toOrder);
 }
 
-export function setOrderStatus(id: number, status: OrderStatus) {
-  open().prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, id);
+export async function setOrderStatus(id: number, status: OrderStatus) {
+  await query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
 }
