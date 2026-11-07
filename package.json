@@ -15,7 +15,7 @@
     "@fontsource/manrope": "5.2.5",
     "gsap": "3.12.5",
     "lenis": "1.1.13",
-    "next": "15.5.15",
+    "next": "15.5.29",
     "pg": "8.23.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -29,5 +29,9 @@
     "@types/react-dom": "19.1.2",
     "@types/three": "0.169.0",
     "typescript": "5.7.2"
+  },
+  "overrides": {
+    "postcss": "8.5.23",
+    "sharp": "0.35.5"
   }
 }

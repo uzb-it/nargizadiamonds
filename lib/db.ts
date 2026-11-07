@@ -140,3 +140,34 @@ export async function listOrders(): Promise<Order[]> {
 export async function setOrderStatus(id: number, status: OrderStatus) {
   await query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
 }
+
+export async function createSession(tokenHash: string, seconds: number) {
+  await query('DELETE FROM admin_sessions WHERE expires_at < now()');
+  await query(`INSERT INTO admin_sessions (token_hash, expires_at) VALUES ($1, now() + make_interval(secs => $2))`, [tokenHash, seconds]);
+}
+
+export async function hasSession(tokenHash: string): Promise<boolean> {
+  return (await query('SELECT 1 FROM admin_sessions WHERE token_hash = $1 AND expires_at > now()', [tokenHash])).length > 0;
+}
+
+export async function deleteSession(tokenHash: string) {
+  await query('DELETE FROM admin_sessions WHERE token_hash = $1', [tokenHash]);
+}
+
+const LOCK_WINDOW = `interval '15 minutes'`;
+
+/** Failed passwords count for 15 minutes after the last one, so a lock ends by itself. */
+export async function isLoginLocked(key: string, limit: number): Promise<boolean> {
+  const rows = await query(`SELECT 1 FROM login_attempts WHERE key = $1 AND fails >= $2 AND last_at > now() - ${LOCK_WINDOW}`, [key, limit]);
+  return rows.length > 0;
+}
+
+export async function addLoginFailure(key: string) {
+  await query(`INSERT INTO login_attempts (key, fails, last_at) VALUES ($1, 1, now())
+    ON CONFLICT (key) DO UPDATE SET last_at = now(),
+      fails = CASE WHEN login_attempts.last_at > now() - ${LOCK_WINDOW} THEN login_attempts.fails + 1 ELSE 1 END`, [key]);
+}
+
+export async function clearLoginFailures(key: string) {
+  await query('DELETE FROM login_attempts WHERE key = $1', [key]);
+}

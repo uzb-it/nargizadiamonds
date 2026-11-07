@@ -20,4 +20,13 @@ export const SCHEMA = `
     items JSONB NOT NULL DEFAULT '[]', total INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'new', lang TEXT NOT NULL DEFAULT 'ru'
   );
+  CREATE TABLE IF NOT EXISTS admin_sessions (
+    token_hash TEXT PRIMARY KEY,
+    expires_at TIMESTAMPTZ NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS login_attempts (
+    key TEXT PRIMARY KEY,
+    fails INTEGER NOT NULL,
+    last_at TIMESTAMPTZ NOT NULL
+  );
 `;

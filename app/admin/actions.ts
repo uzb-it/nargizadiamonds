@@ -3,15 +3,28 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { checkPassword, endSession, requireAdmin, startSession } from '@/lib/auth';
-import { deleteProduct, getProductById, saveProduct, setOrderStatus, UPLOAD_DIR } from '@/lib/db';
+import { addLoginFailure, clearLoginFailures, deleteProduct, getProductById, isLoginLocked, saveProduct, setOrderStatus, UPLOAD_DIR } from '@/lib/db';
 import { CATEGORIES, METALS, STONES, type Category, type Metal, type OrderStatus, type Stone } from '@/lib/types';
 import { slugify } from '@/lib/format';
 
+const IP_LIMIT = 5, TOTAL_LIMIT = 50;
+
 export async function login(_: unknown, fd: FormData) {
-  if (!checkPassword(String(fd.get('password') ?? ''))) return { error: 'Неверный пароль' };
+  // x-real-ip comes from Nginx; the total limit holds when an attack comes from many addresses
+  const ip = 'ip:' + ((await headers()).get('x-real-ip') ?? 'unknown');
+  if (await isLoginLocked(ip, IP_LIMIT) || await isLoginLocked('total', TOTAL_LIMIT)) {
+    return { error: 'Слишком много попыток. Попробуйте через 15 минут' };
+  }
+  if (!checkPassword(String(fd.get('password') ?? ''))) {
+    await addLoginFailure(ip);
+    await addLoginFailure('total');
+    return { error: 'Неверный пароль' };
+  }
+  await clearLoginFailures(ip);
   await startSession();
   redirect('/admin');
 }
